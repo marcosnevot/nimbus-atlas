@@ -7,16 +7,19 @@ import type {
   MapViewport,
   MapCoordinates,
 } from "../../features/map/MapRoot";
+import { useMapStore } from "../../state/mapStore";
 
 export const MapLayout: React.FC = () => {
+  const setViewport = useMapStore((state) => state.setViewport);
+  const setSelectedLocation = useMapStore((state) => state.setSelectedLocation);
+  const setMapReady = useMapStore((state) => state.setMapReady);
+
   const handleViewportChange = (viewport: MapViewport) => {
-    // TODO Phase 3D: connect with map store (viewport state)
-    console.debug("Map viewport changed:", viewport);
+    setViewport(viewport);
   };
 
   const handleMapClick = (coords: MapCoordinates) => {
-    // TODO Phase 3D: connect with selected location state
-    console.debug("Map clicked at:", coords);
+    setSelectedLocation(coords);
   };
 
   return (
@@ -25,6 +28,7 @@ export const MapLayout: React.FC = () => {
         <MapRoot
           onViewportChange={handleViewportChange}
           onMapClick={handleMapClick}
+          onMapReady={setMapReady}
         />
         <MapOverlays />
       </div>

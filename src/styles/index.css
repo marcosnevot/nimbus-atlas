@@ -146,11 +146,36 @@ a:hover {
   font-weight: 600;
 }
 
-.na-side-panel__placeholder {
-  margin: 0;
+.na-side-panel__section {
+  margin-top: var(--na-spacing-3);
   font-size: 0.875rem;
+}
+
+.na-side-panel__subtitle {
+  margin: 0 0 var(--na-spacing-2) 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.na-side-panel__coords {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.na-side-panel__viewport-row {
+  margin: 0;
+  font-size: 0.8rem;
   color: var(--na-color-text-muted);
 }
+
+.na-side-panel__section--secondary {
+  border-top: 1px solid var(--na-color-border-subtle);
+  padding-top: var(--na-spacing-3);
+  margin-top: var(--na-spacing-3);
+}
+
 
 /* Map overlays */
 .na-map-overlays {
