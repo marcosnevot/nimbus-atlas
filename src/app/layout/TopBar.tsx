@@ -1,30 +1,35 @@
 // src/app/layout/TopBar.tsx
 import React from "react";
-import { TextField } from "../../ui/TextField";
-import { IconButton } from "../../ui/IconButton";
 
 export const TopBar: React.FC = () => {
   return (
-    <header className="na-top-bar">
+    <header
+      className="na-top-bar"
+      role="banner"
+      aria-label="Nimbus Atlas top bar"
+    >
       <div className="na-top-bar__brand">
-        <span className="na-top-bar__logo" aria-hidden="true">
-          ☁️
-        </span>
+        <span className="na-top-bar__logo">🌀</span>
         <span className="na-top-bar__title">Nimbus Atlas</span>
       </div>
 
       <div className="na-top-bar__search">
-        <TextField
-          id="topbar-search"
+        <input
+          className="na-text-field__input"
+          type="search"
           placeholder="Search for a location..."
           aria-label="Search for a location"
         />
       </div>
 
       <div className="na-top-bar__actions">
-        <IconButton aria-label="Open settings">
+        <button
+          type="button"
+          className="na-icon-button na-button--ghost"
+          aria-label="Open settings"
+        >
           ⚙️
-        </IconButton>
+        </button>
       </div>
     </header>
   );

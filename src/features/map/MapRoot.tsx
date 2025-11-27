@@ -1,6 +1,7 @@
 // src/features/map/MapRoot.tsx
 import React, { useEffect, useRef } from "react";
-import maplibregl, { Map as MapLibreMap } from "maplibre-gl";
+import maplibregl from "maplibre-gl";
+import type { Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import {
@@ -38,15 +39,15 @@ export const MapRoot: React.FC<MapRootProps> = ({
   onMapReady,
   className,
 }) => {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!mapContainerRef.current) return;
     if (mapRef.current) return;
 
     const map = new maplibregl.Map({
-      container: containerRef.current,
+      container: mapContainerRef.current,
       style: MAP_STYLE_URL,
       center: [initialCenter.lng, initialCenter.lat],
       zoom: initialZoom,
@@ -67,6 +68,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
     };
 
     const handleLoad = () => {
+      // Debug y señal de mapa listo
       console.debug("[MapRoot] Map loaded");
       onMapReady?.();
       emitViewport();
@@ -113,5 +115,11 @@ export const MapRoot: React.FC<MapRootProps> = ({
 
   const classes = ["na-map-root", className].filter(Boolean).join(" ");
 
-  return <div ref={containerRef} className={classes} />;
+  return (
+    <div
+      ref={mapContainerRef}
+      className={classes}
+      data-testid="na-map-root"
+    />
+  );
 };

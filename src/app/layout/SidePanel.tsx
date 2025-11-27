@@ -9,7 +9,10 @@ export const SidePanel: React.FC = () => {
   const viewport = useMapStore((state) => state.viewport);
 
   return (
-    <aside className="na-side-panel">
+    <aside
+      className="na-side-panel"
+      aria-label="Location details"
+    >
       <h2 className="na-side-panel__title">Location details</h2>
 
       {!selectedLocation && (
