@@ -115,6 +115,7 @@ a:hover {
   position: relative;
   flex: 1;
   min-height: 0;
+  height: 100%;
   border-radius: var(--na-radius-lg);
   overflow: hidden;
   border: 1px solid var(--na-color-border-subtle);
@@ -151,37 +152,6 @@ a:hover {
   color: var(--na-color-text-muted);
 }
 
-/* Map placeholder */
-.na-map-placeholder {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  background-image: radial-gradient(circle at 0 0, #1e293b 0, #020617 55%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.na-map-placeholder__content {
-  text-align: center;
-  padding: var(--na-spacing-4);
-  border-radius: var(--na-radius-md);
-  border: 1px dashed var(--na-color-border-subtle);
-  background-color: rgba(15, 23, 42, 0.75);
-  max-width: 420px;
-}
-
-.na-map-placeholder__title {
-  margin: 0 0 var(--na-spacing-2) 0;
-  font-weight: 600;
-}
-
-.na-map-placeholder__subtitle {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--na-color-text-muted);
-}
-
 /* Map overlays */
 .na-map-overlays {
   position: absolute;
@@ -190,6 +160,7 @@ a:hover {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  z-index: 10;
 }
 
 .na-map-overlays__stack {
@@ -245,6 +216,7 @@ a:hover {
   padding-inline: var(--na-spacing-2);
 }
 
+/* Text field */
 .na-text-field__input {
   width: 100%;
   border-radius: var(--na-radius-md);
@@ -290,6 +262,19 @@ a:hover {
 
 .na-link {
   font-size: 0.9rem;
+}
+
+/* Map core: ensure MapLibre canvas fills the container */
+.na-map-root {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.na-map-root canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 /* Responsive tweaks */
