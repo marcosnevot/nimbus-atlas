@@ -60,7 +60,7 @@ a:hover {
 .na-app-shell__main {
   flex: 1;
   display: flex;
-  padding: var(--na-spacing-4);
+  padding: 0;           
   box-sizing: border-box;
 }
 
@@ -107,7 +107,6 @@ a:hover {
 .na-map-layout {
   flex: 1;
   display: flex;
-  gap: var(--na-spacing-4);
   min-height: 0;
 }
 
@@ -116,20 +115,20 @@ a:hover {
   flex: 1;
   min-height: 0;
   height: 100%;
-  border-radius: var(--na-radius-lg);
+  border-radius: 0;
   overflow: hidden;
-  border: 1px solid var(--na-color-border-subtle);
-  background: radial-gradient(circle at top, #0f172a 0, #020617 60%);
-}
-
-.na-map-layout__side-panel {
-  width: 320px;
+  border: none;
+  background: 0;
 }
 
 /* Side panel */
 .na-side-panel {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  top: var(--na-spacing-4);
+  right: var(--na-spacing-4);
+  bottom: var(--na-spacing-4);
+  width: 320px;
+  max-width: 100%;
   border-radius: var(--na-radius-lg);
   border: 1px solid var(--na-color-border-subtle);
   background: linear-gradient(to bottom, #020617, #020617);
@@ -138,6 +137,8 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: var(--na-spacing-2);
+  pointer-events: auto;
+  z-index: 20;
 }
 
 .na-side-panel__title {
@@ -176,6 +177,14 @@ a:hover {
   margin-top: var(--na-spacing-3);
 }
 
+/* Map markers */
+.na-map-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background-color: var(--na-color-accent);
+  box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.9);
+}
 
 /* Map overlays */
 .na-map-overlays {
@@ -326,6 +335,9 @@ a:hover {
   }
 
   .na-side-panel {
-    margin-top: var(--na-spacing-3);
+    left: var(--na-spacing-3);
+    right: var(--na-spacing-3);
+    width: auto;
+    bottom: var(--na-spacing-3);
   }
 }

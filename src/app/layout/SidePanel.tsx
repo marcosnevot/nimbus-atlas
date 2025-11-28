@@ -7,12 +7,12 @@ const formatCoord = (value: number) => value.toFixed(4);
 export const SidePanel: React.FC = () => {
   const selectedLocation = useMapStore((state) => state.selectedLocation);
   const viewport = useMapStore((state) => state.viewport);
+  const activeLayers = useMapStore((state) => state.activeLayers);
+
+  const isMockMarkersActive = activeLayers.includes("mock-markers");
 
   return (
-    <aside
-      className="na-side-panel"
-      aria-label="Location details"
-    >
+    <aside className="na-side-panel" aria-label="Location details">
       <h2 className="na-side-panel__title">Location details</h2>
 
       {!selectedLocation && (
@@ -31,11 +31,16 @@ export const SidePanel: React.FC = () => {
         </section>
       )}
 
-      {viewport && (
+      {(viewport || activeLayers.length > 0) && (
         <section className="na-side-panel__section na-side-panel__section--secondary">
-          <h3 className="na-side-panel__subtitle">Current viewport</h3>
+          <h3 className="na-side-panel__subtitle">Map status</h3>
+          {viewport && (
+            <p className="na-side-panel__viewport-row">
+              Zoom: {viewport.zoom.toFixed(2)}
+            </p>
+          )}
           <p className="na-side-panel__viewport-row">
-            Zoom: {viewport.zoom.toFixed(2)}
+            Mock markers layer: {isMockMarkersActive ? "ON" : "OFF"}
           </p>
         </section>
       )}
