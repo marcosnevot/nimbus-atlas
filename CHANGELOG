@@ -1,0 +1,63 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+- No unreleased changes yet.
+
+## [0.1.0] - 2025-11-28
+
+Initial changelog entry.
+
+### Added
+
+#### Product & Domain Framing 
+
+- Defined the product vision and map-centric positioning of Nimbus Atlas.
+- Established the core meteorological domain model (locations, snapshots, forecasts, alerts, layers) and provider-agnostic contracts.
+- Documented high-level API contracts and integration boundaries for external weather and geocoding providers.
+
+#### UX Flows & Design System Foundations 
+
+- Defined five key user journeys (UJ1–UJ5) around current conditions, exploration, search, layers and error/empty handling.
+- Closed the SPA navigation model with the map as the primary surface across desktop, tablet and mobile.
+- Established the first version of the design system: color/typography/spacing/radius tokens and a catalog of base UI components (TopBar, SidePanel, LayersPanel, LegendBar, buttons, inputs, feedback components, etc.).
+- Captured global UX patterns for loading/empty/error, accessibility, responsive breakpoints and motion fundamentals.
+
+#### Phase 3 – Frontend Skeleton & Map Core (code)
+
+- Created the `nimbus-atlas` frontend project using Vite, React and TypeScript, with basic tooling and scripts for development, build and tests.
+- Implemented the App Shell with:
+  - A top bar (brand placeholder, global search input, settings/action area).
+  - A main map area that fills the viewport.
+  - A floating side panel placeholder used as the first “details” surface.
+- Introduced a minimal router with:
+  - Main map route (`/`).
+  - Settings route and a generic Not Found view.
+- Implemented the initial Map Core (`MapRoot`) using MapLibre GL JS:
+  - Map initialization with a sensible default center and zoom.
+  - Pan/zoom interactions handled by the map engine.
+  - Click events translated into neutral `onMapClick` callbacks carrying coordinates.
+  - A demo marker + “selected location” overlay to prove the map ↔ UI event flow.
+- Added basic UI state to:
+  - Track the currently selected location from map clicks.
+  - Toggle the visibility of the layers panel without remounting the map.
+- Wired a simple map layout and overlays:
+  - Layer toggle button and panel as floating overlays on top of the map.
+  - Coordinates/status overlay showing the last selected location.
+
+### Testing
+
+- Set up Vitest and React Testing Library for unit and component tests.
+- Added base tests for:
+  - App Shell layout (top bar, map area and side panel rendering).
+  - MapRoot mounting and `onMapReady` callback execution.
+  - MapRoot click handling via simulated events.
+
+### Internal
+
+- Aligned the frontend repository structure with the architecture and phase documents (features-based layout, map-centric core, minimal state layer), preparing the ground for Phase 4 (Weather Domain Integration & Data Contracts).
