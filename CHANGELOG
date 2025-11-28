@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - No unreleased changes yet.
 
+## [0.2.0] - 2025-11-28
+
+### Added
+
+#### Weather Domain Integration & Data Contracts
+
+- Integrated the weather domain model into the frontend, using canonical entities (`CurrentWeather`, `ForecastTimeline`, `WeatherAlert`, `WeatherBundle`, etc.) aligned with the internal domain documentation.
+- Implemented an OpenWeather-based weather provider (`OpenWeatherService`) on top of One Call API 3.0, including URL builder, request helpers and mapping from provider JSON into the domain model.
+- Normalised units, timestamps and condition codes (`WeatherConditionCode`) so the rest of the app stays provider-agnostic and does not depend on OpenWeather-specific details.
+- Added a TTL-based `weatherStore` with bundle fan-out (current, forecast and alerts) and in-flight request deduplication per location key.
+- Connected the map interaction to live weather: clicking on a map location now triggers a weather bundle fetch and exposes the result in the Side Panel.
+
+#### Weather Telemetry & Degraded Data Tracking
+
+- Added weather telemetry helpers to track OpenWeather API usage:
+  - Request, success and error events including timing and location metadata.
+  - Degraded-data events when forecasts or alerts cannot be mapped cleanly to the domain model.
+- Wired the telemetry into `OpenWeatherService.fetchWeatherBundle`, so weather-related behaviour is visible in observability tools.
+
+#### Testing
+
+- Added fixtures for OpenWeather One Call responses to drive adapter and service tests.
+- Added unit tests for:
+  - Mapping current conditions, hourly/daily forecasts and alerts from OpenWeather JSON into domain entities.
+  - `OpenWeatherService.fetchWeatherBundle` success and failure modes (config, network, HTTP and contract errors).
+- Added store-level tests for the weather store:
+  - Bundle caching and TTL behaviour.
+  - In-flight request deduplication per location.
+  - Error propagation across current/forecast/alerts resources when the bundle fetch fails.
+- Added a Side Panel integration test that covers the `map → weatherStore → UI` flow for selected locations.
+
 ## [0.1.0] - 2025-11-28
 
 Initial changelog entry.
