@@ -3,7 +3,7 @@ import React from "react";
 import { useMapStore } from "../../state/mapStore";
 import { useSelectedLocationCurrentWeather } from "../../hooks/useSelectedLocationCurrentWeather";
 import { useSelectedLocationForecast } from "../../hooks/useSelectedLocationForecast";
-import { useSelectedLocationAlerts } from "../../hooks/useSelectedLocationAlerts";
+import { Skeleton } from "../../ui/Skeleton";
 
 const formatCoord = (value: number) => value.toFixed(4);
 
@@ -31,16 +31,16 @@ const formatDateShort = (iso: string) => {
   }
 };
 
-export const SidePanel: React.FC = () => {
+type SidePanelProps = {
+  isOpen: boolean;
+};
+
+export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
   const selectedLocation = useMapStore((state) => state.selectedLocation);
   const viewport = useMapStore((state) => state.viewport);
-  const activeLayers = useMapStore((state) => state.activeLayers);
 
   const { resource: weatherResource } = useSelectedLocationCurrentWeather();
   const { resource: forecastResource } = useSelectedLocationForecast();
-  const { resource: alertsResource } = useSelectedLocationAlerts();
-
-  const isMockMarkersActive = activeLayers.includes("mock-markers");
 
   const weatherStatus = weatherResource?.status ?? "idle";
   const currentWeather = weatherResource?.data;
@@ -59,12 +59,23 @@ export const SidePanel: React.FC = () => {
     ? dailyTimeline.slices.slice(0, 4)
     : [];
 
-  const alertsStatus = alertsResource?.status ?? "idle";
-  const alerts = alertsResource?.data ?? [];
-  const alertsError = alertsResource?.error;
+  const hasSelection = Boolean(selectedLocation);
+
+  const isWeatherLoading =
+    hasSelection && (weatherStatus === "idle" || weatherStatus === "loading");
+  const isForecastLoading =
+    hasSelection && (forecastStatus === "idle" || forecastStatus === "loading");
+
+  const isBusy = isWeatherLoading || isForecastLoading;
 
   return (
-    <aside className="na-side-panel" aria-label="Location details">
+    <aside
+      className="na-side-panel"
+      aria-label="Location details"
+      data-open={isOpen ? "true" : "false"}
+      data-has-selection={hasSelection ? "true" : "false"}
+      aria-busy={isBusy}
+    >
       <h2 className="na-side-panel__title">Location details</h2>
 
       {!selectedLocation && (
@@ -76,6 +87,16 @@ export const SidePanel: React.FC = () => {
       {selectedLocation && (
         <section className="na-side-panel__section">
           <h3 className="na-side-panel__subtitle">Selected location</h3>
+
+          {selectedLocation.name && (
+            <p className="na-side-panel__location-name">
+              {selectedLocation.name}
+              {selectedLocation.countryCode
+                ? `, ${selectedLocation.countryCode}`
+                : ""}
+            </p>
+          )}
+
           <p className="na-side-panel__coords">
             <span>Latitude: {formatCoord(selectedLocation.lat)}</span>
             <span>Longitude: {formatCoord(selectedLocation.lng)}</span>
@@ -87,10 +108,23 @@ export const SidePanel: React.FC = () => {
               Current weather
             </h4>
 
-            {(weatherStatus === "idle" || weatherStatus === "loading") && (
-              <p className="na-side-panel__muted">
-                Loading current weather for this location…
-              </p>
+            {isWeatherLoading && (
+              <div
+                className="na-side-panel__weather-loading"
+                aria-live="polite"
+              >
+                <div className="na-side-panel__weather-main">
+                  <Skeleton className="na-skeleton--temperature" />
+                  <Skeleton className="na-skeleton--label" />
+                </div>
+                <div className="na-side-panel__weather-meta">
+                  <Skeleton className="na-skeleton--meta" />
+                  <Skeleton className="na-skeleton--meta" />
+                </div>
+                <p className="na-side-panel__muted na-side-panel__loading-label">
+                  Loading current weather for this location…
+                </p>
+              </div>
             )}
 
             {weatherStatus === "error" && (
@@ -131,11 +165,41 @@ export const SidePanel: React.FC = () => {
               Forecast
             </h4>
 
-            {(forecastStatus === "idle" || forecastStatus === "loading") && (
-              <p className="na-side-panel__muted">
-                Loading forecast for this location…
-              </p>
-            )}
+            {(forecastStatus === "idle" || forecastStatus === "loading") &&
+              hasSelection && (
+                <div
+                  className="na-side-panel__forecast-loading"
+                  aria-live="polite"
+                >
+                  <p className="na-side-panel__forecast-label">
+                    Next hours & days
+                  </p>
+                  <ul className="na-side-panel__forecast-list">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                      <li
+                        key={index}
+                        className="na-side-panel__forecast-item"
+                      >
+                        <Skeleton
+                          className="na-skeleton--line"
+                          style={{ maxWidth: "3rem" }}
+                        />
+                        <Skeleton
+                          className="na-skeleton--line"
+                          style={{ maxWidth: "4rem" }}
+                        />
+                        <Skeleton
+                          className="na-skeleton--line"
+                          style={{ maxWidth: "6rem" }}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="na-side-panel__muted na-side-panel__loading-label">
+                    Loading forecast for this location…
+                  </p>
+                </div>
+              )}
 
             {forecastStatus === "error" && (
               <p className="na-side-panel__error">
@@ -207,68 +271,14 @@ export const SidePanel: React.FC = () => {
               </>
             )}
           </div>
-
-          {/* Alerts */}
-          <div className="na-side-panel__alerts">
-            <h4 className="na-side-panel__subtitle na-side-panel__subtitle--small">
-              Weather alerts
-            </h4>
-
-            {alertsStatus === "loading" && (
-              <p className="na-side-panel__muted">
-                Checking active alerts for this area…
-              </p>
-            )}
-
-            {alertsStatus === "error" && (
-              <p className="na-side-panel__error">
-                Unable to load alerts
-                {alertsError?.message ? `: ${alertsError.message}` : "."}
-              </p>
-            )}
-
-            {alertsStatus === "success" && alerts.length === 0 && (
-              <p className="na-side-panel__muted">
-                No active weather alerts for this area.
-              </p>
-            )}
-
-            {alertsStatus === "success" && alerts.length > 0 && (
-              <ul className="na-side-panel__alerts-list">
-                {alerts.map((alert) => (
-                  <li
-                    key={alert.id}
-                    className={`na-side-panel__alert na-side-panel__alert--${alert.severity}`}
-                  >
-                    <div className="na-side-panel__alert-header">
-                      <span className="na-side-panel__alert-title">
-                        {alert.title}
-                      </span>
-                      <span className="na-side-panel__alert-severity">
-                        {alert.severity.toUpperCase()}
-                      </span>
-                    </div>
-                    <p className="na-side-panel__alert-description">
-                      {alert.description}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
         </section>
       )}
 
-      {(viewport || activeLayers.length > 0) && (
+      {viewport && (
         <section className="na-side-panel__section na-side-panel__section--secondary">
           <h3 className="na-side-panel__subtitle">Map status</h3>
-          {viewport && (
-            <p className="na-side-panel__viewport-row">
-              Zoom: {viewport.zoom.toFixed(2)}
-            </p>
-          )}
           <p className="na-side-panel__viewport-row">
-            Mock markers layer: {isMockMarkersActive ? "ON" : "OFF"}
+            Zoom: {viewport.zoom.toFixed(2)}
           </p>
         </section>
       )}
