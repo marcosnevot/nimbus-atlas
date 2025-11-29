@@ -10,7 +10,7 @@
   --na-color-bg-elevated: #020617;
   --na-color-surface: #020617;
   --na-color-border-subtle: #1e293b;
-  --na-color-text: #e5e7eb;
+  --na-color-text: #ffffff;
   --na-color-text-muted: #9ca3af;
   --na-color-accent: #38bdf8;
   --na-color-accent-soft: rgba(56, 189, 248, 0.12);
@@ -24,6 +24,10 @@
   --na-spacing-3: 0.75rem;
   --na-spacing-4: 1rem;
   --na-spacing-6: 1.5rem;
+
+  --na-motion-fast: 120ms;
+  --na-motion-standard: 180ms;
+  --na-motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 /* Base layout */
@@ -60,7 +64,7 @@ a:hover {
 .na-app-shell__main {
   flex: 1;
   display: flex;
-  padding: 0;           
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -121,60 +125,304 @@ a:hover {
   background: 0;
 }
 
-/* Side panel */
+/* Side panel – container */
 .na-side-panel {
   position: absolute;
   top: var(--na-spacing-4);
   right: var(--na-spacing-4);
   bottom: var(--na-spacing-4);
-  width: 320px;
+  width: 500px;
   max-width: 100%;
   border-radius: var(--na-radius-lg);
-  border: 1px solid var(--na-color-border-subtle);
-  background: linear-gradient(to bottom, #020617, #020617);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background:
+    #0206178f;
+  backdrop-filter: blur(18px);
   padding: var(--na-spacing-4);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--na-spacing-2);
+  z-index: 1;
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.95),
+    0 0 0 1px rgba(15, 23, 42, 0.8);
+
+  transform: translateX(0);
+  opacity: 1;
   pointer-events: auto;
-  z-index: 20;
+  transition:
+    transform var(--na-motion-standard) var(--na-motion-easing),
+    opacity var(--na-motion-standard) var(--na-motion-easing);
+  overflow-y: auto;
 }
 
+.na-side-panel[data-open="false"] {
+  transform: translateX(110%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.na-side-panel[data-open="true"] {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Header */
 .na-side-panel__title {
-  margin: 0;
-  font-size: 1rem;
+  margin: 0 0 var(--na-spacing-1);
+  font-size: 0.78rem;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--na-color-text-muted);
+  opacity: 0.9;
 }
 
+.na-side-panel__placeholder {
+  margin: var(--na-spacing-4) 0 0;
+  font-size: 0.9rem;
+  color: var(--na-color-text-muted);
+  line-height: 1.6;
+}
+
+/* Generic sections */
 .na-side-panel__section {
   margin-top: var(--na-spacing-3);
   font-size: 0.875rem;
 }
 
+/* Primera sección (bloque principal de localización + tiempo) */
+.na-side-panel__section:first-of-type {
+  margin-top: var(--na-spacing-3);
+  padding: var(--na-spacing-3);
+  border-radius: var(--na-radius-lg);
+  background: rgba(15, 23, 42, 0.548);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* Subtítulos */
 .na-side-panel__subtitle {
-  margin: 0 0 var(--na-spacing-2) 0;
-  font-size: 0.875rem;
-  font-weight: 500;
+  margin: 0 0 var(--na-spacing-1) 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--na-color-text-muted);
+}
+
+.na-side-panel__subtitle--small {
+  margin-top: var(--na-spacing-4);
+}
+
+/* City name + coords */
+.na-side-panel__location-name {
+  margin: 0;
+  font-size: 3rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-shadow: 0 0 18px rgba(15, 23, 42, 0.9);
 }
 
 .na-side-panel__coords {
-  margin: 0;
+  margin: var(--na-spacing-2) 0 0;
   display: flex;
-  flex-direction: column;
-  gap: 0.125rem;
-}
-
-.na-side-panel__viewport-row {
-  margin: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
   font-size: 0.8rem;
   color: var(--na-color-text-muted);
 }
 
+/* Map status (bloque inferior fijo) */
 .na-side-panel__section--secondary {
-  border-top: 1px solid var(--na-color-border-subtle);
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
   padding-top: var(--na-spacing-3);
+  margin-top: auto;
+  font-size: 0.8rem;
+}
+
+.na-side-panel__viewport-row {
+  margin: 0 0 0.25rem;
+  font-size: 0.8rem;
+  color: var(--na-color-text-muted);
+}
+
+/* Texto genérico */
+.na-side-panel__muted {
+  font-size: 0.8rem;
+  color: var(--na-color-text-muted);
+}
+
+.na-side-panel__error {
+  margin-top: var(--na-spacing-1);
+  font-size: 0.8rem;
+  color: var(--na-color-danger);
+}
+
+.na-side-panel__loading-label {
+  margin-top: var(--na-spacing-2);
+}
+
+/* Weather hero */
+.na-side-panel__weather {
   margin-top: var(--na-spacing-3);
+}
+
+.na-side-panel__weather-main {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--na-spacing-3);
+  margin-top: var(--na-spacing-2);
+}
+
+.na-side-panel__weather-temp {
+  font-size: 3.8rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.na-side-panel__weather-label {
+  font-size: 0.9rem;
+  color: var(--na-color-text-muted);
+  text-align: right;
+  max-width: 9rem;
+}
+
+.na-side-panel__weather-meta {
+  margin-top: var(--na-spacing-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  font-size: 0.8rem;
+  color: var(--na-color-text-muted);
+}
+
+/* Skeleton layout para current weather */
+.na-side-panel__weather-loading .na-side-panel__weather-main {
+  align-items: center;
+}
+
+/* Forecast */
+.na-side-panel__forecast {
+  margin-top: var(--na-spacing-4);
+}
+
+/* Bloque de “Next hours / Next days” */
+.na-side-panel__forecast-block {
+  margin-top: var(--na-spacing-3);
+}
+
+.na-side-panel__forecast-label {
+  margin: 0 0 0.4rem 0;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--na-color-text-muted);
+}
+
+/* Lista de elementos */
+.na-side-panel__forecast-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Tarjeta de cada tramo de previsión */
+.na-side-panel__forecast-item {
+  display: grid;
+  grid-template-columns: 3.4rem 3.6rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--na-spacing-2);
+  padding: 0.45rem 0.7rem;
+  border-radius: var(--na-radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background:
+    rgba(15, 23, 42, 0.171);
+  transition:
+    background-color 140ms ease-out,
+    transform 80ms ease-out,
+    box-shadow 140ms ease-out,
+    border-color 140ms ease-out,
+    opacity 120ms ease-out;
+}
+
+.na-side-panel__forecast-item:hover {
+  transform: translateY(-0.8px);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.95);
+  border-color: rgba(56, 191, 248, 0.322);
+}
+
+/* Columna: hora / día */
+.na-side-panel__forecast-time {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--na-color-text-muted);
+}
+
+/* Columna: temperatura */
+.na-side-panel__forecast-temp {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+/* Columna: descripción */
+.na-side-panel__forecast-cond {
+  font-size: 0.8rem;
+  color: var(--na-color-text-muted);
+  justify-self: flex-end;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Skeleton layout para forecast */
+.na-side-panel__forecast-loading .na-side-panel__forecast-list {
+  gap: 0.4rem;
+}
+
+.na-side-panel__forecast-loading .na-side-panel__forecast-item {
+  background: rgba(15, 23, 42, 0.7);
+  border-style: dashed;
+  border-color: rgba(30, 64, 175, 0.4);
+  box-shadow: none;
+  transform: none;
+}
+
+
+
+/* TextField – hover/focus microinteraction */
+.na-text-field__input {
+  width: 100%;
+  border-radius: var(--na-radius-md);
+  border: 1px solid var(--na-color-border-subtle);
+  background-color: rgba(15, 23, 42, 0.85);
+  color: var(--na-color-text);
+  padding: var(--na-spacing-2) var(--na-spacing-3);
+  font-size: 0.875rem;
+  box-sizing: border-box;
+  outline: none;
+  transition:
+    border-color 140ms ease-out,
+    box-shadow 140ms ease-out,
+    background-color 140ms ease-out;
+}
+
+.na-text-field__input:hover {
+  background-color: rgba(15, 23, 42, 0.95);
+}
+
+.na-text-field__input:focus-visible {
+  border-color: rgba(56, 189, 248, 0.8);
+  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.6);
+  background-color: rgba(15, 23, 42, 0.98);
 }
 
 /* Map markers */
@@ -184,6 +432,67 @@ a:hover {
   border-radius: 999px;
   background-color: var(--na-color-accent);
   box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.9);
+}
+
+/* City labels */
+.na-city-label {
+  /* Let MapLibre handle absolute positioning via .maplibregl-marker */
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--na-color-text);
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(0, 0, 0, 1);
+  opacity: 0;
+  animation: na-city-label-fade-in 160ms ease-out forwards;
+}
+
+.na-city-label__name {
+  line-height: 1.2;
+}
+
+/* Size tiers: larger cities = larger labels */
+.na-city-label--tier-xl {
+  font-size: 1.3rem;
+  letter-spacing: 0.02em;
+}
+
+.na-city-label--tier-lg {
+  font-size: 1.15rem;
+}
+
+.na-city-label--tier-md {
+  font-size: 1rem;
+}
+
+.na-city-label--tier-sm {
+  font-size: 0.95rem;
+}
+
+.na-city-label__temp {
+  font-size: 0.72em;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+@keyframes na-city-label-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Ensure MapLibre markers are positioned over the map, not in normal flow */
+.maplibregl-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
 }
 
 /* Map overlays */
@@ -216,8 +525,11 @@ a:hover {
   background-color: var(--na-color-accent-soft);
   color: var(--na-color-accent);
   border: 1px solid transparent;
-  transition: background-color 120ms ease-out, border-color 120ms ease-out,
-    transform 80ms ease-out;
+  transition:
+    background-color var(--na-motion-fast) var(--na-motion-easing),
+    border-color var(--na-motion-fast) var(--na-motion-easing),
+    box-shadow var(--na-motion-fast) var(--na-motion-easing),
+    transform var(--na-motion-fast) var(--na-motion-easing);
 }
 
 .na-button:hover,
@@ -231,6 +543,16 @@ a:hover {
   transform: translateY(1px);
 }
 
+.na-icon-button--toggled {
+  border-color: rgba(56, 189, 248, 0.9);
+  color: #f9fafb;
+}
+
+.na-icon-button--toggled:hover {
+  background-color: rgba(56, 189, 248, 0.2);
+}
+
+/* Primary / ghost buttons keep the existing palette */
 .na-button--primary {
   background-color: var(--na-color-accent);
   color: #020617;
@@ -245,9 +567,44 @@ a:hover {
   border-color: var(--na-color-border-subtle);
 }
 
-.na-button--sm,
-.na-icon-button {
+/* Size variant only for text buttons */
+.na-button--sm {
   padding-inline: var(--na-spacing-2);
+}
+
+/* Icon buttons – map controls (zoom, layers, etc.) */
+.na-icon-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--na-radius-md);
+  background-color: rgba(15, 23, 42, 0.85);
+  border-color: rgba(148, 163, 184, 0.5);
+  color: #e0f2fe;
+  backdrop-filter: blur(12px);
+}
+
+.na-icon-button:hover {
+  background-color: rgba(15, 23, 42, 0.95);
+}
+
+.na-icon-button:active {
+  background-color: rgba(15, 23, 42, 1);
+  color: #ffffff;
+}
+
+.na-icon-button:focus-visible {
+  outline: 2px solid var(--na-color-accent);
+  outline-offset: 3px;
+}
+
+.na-icon-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
 }
 
 /* Text field */
@@ -260,10 +617,75 @@ a:hover {
   padding: var(--na-spacing-2) var(--na-spacing-3);
   font-size: 0.875rem;
   box-sizing: border-box;
+  transition:
+    border-color var(--na-motion-fast) var(--na-motion-easing),
+    box-shadow var(--na-motion-fast) var(--na-motion-easing),
+    background-color var(--na-motion-fast) var(--na-motion-easing);
 }
 
 .na-text-field__input::placeholder {
   color: var(--na-color-text-muted);
+}
+
+.na-text-field__input:focus-visible {
+  outline: none;
+  border-color: var(--na-color-accent);
+  box-shadow: 0 0 0 1px var(--na-color-accent),
+    0 12px 30px rgba(15, 23, 42, 0.9);
+  background-color: #020617;
+}
+
+/* Skeletons */
+.na-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--na-radius-sm);
+  background: linear-gradient(90deg,
+      #020617 0%,
+      #0b1120 50%,
+      #020617 100%);
+  background-size: 200% 100%;
+  animation: na-skeleton-shimmer 1200ms ease-in-out infinite;
+}
+
+.na-skeleton--temperature {
+  width: 4.5rem;
+  height: 2.3rem;
+  border-radius: 999px;
+  margin-bottom: 0.25rem;
+}
+
+.na-skeleton--label {
+  width: 6rem;
+  height: 0.9rem;
+}
+
+.na-skeleton--meta {
+  width: 5rem;
+  height: 0.75rem;
+}
+
+.na-skeleton--line {
+  width: 100%;
+  height: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+@keyframes na-skeleton-shimmer {
+  0% {
+    background-position: -150% 0;
+  }
+
+  100% {
+    background-position: 150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .na-skeleton {
+    animation: none;
+    background-position: 0 0;
+  }
 }
 
 /* Settings & NotFound views */
@@ -309,6 +731,19 @@ a:hover {
   width: 100%;
   height: 100%;
   display: block;
+}
+
+/* Motion preferences */
+@media (prefers-reduced-motion: reduce) {
+
+  .na-button,
+  .na-icon-button,
+  .na-text-field__input,
+  .na-side-panel {
+    transition: none;
+    transform: none;
+    box-shadow: none;
+  }
 }
 
 /* Responsive tweaks */

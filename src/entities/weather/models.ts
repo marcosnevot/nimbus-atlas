@@ -113,3 +113,15 @@ export interface WeatherBundle {
   alerts: WeatherAlert[];
   provider: ProviderMetadata;
 }
+
+// City weather overlay view models (Phase 5)
+
+export interface CityWeatherPoint {
+  id: string;
+  location: LocationRef;
+  temperature: number;
+  conditionCode: WeatherConditionCode;
+  conditionLabel: string;
+  observedAt: string; // ISO string in UTC
+  population?: number;
+}
