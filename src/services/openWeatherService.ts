@@ -5,8 +5,6 @@ import {
   ForecastTimeline,
   ForecastSlice,
   WeatherAlert,
-  WeatherAlertSeverity,
-  WeatherAlertType,
   LocationRef,
   ProviderMetadata,
   WeatherBundle,
@@ -20,85 +18,16 @@ import {
   trackWeatherDataDegraded,
 } from "../observability/weatherTelemetry";
 
-const ONE_CALL_BASE_URL = "https://api.openweathermap.org/data/3.0/onecall";
-
-interface OpenWeatherWeatherEntry {
-  id: number;
-  main: string;
-  description: string;
-  icon: string;
-}
-
-interface OpenWeatherCurrentBlock {
-  dt: number;
-  temp: number;
-  feels_like: number;
-  humidity: number;
-  pressure: number;
-  wind_speed: number;
-  wind_deg: number;
-  weather: OpenWeatherWeatherEntry[];
-}
-
-interface OpenWeatherHourlyEntry {
-  dt: number;
-  temp: number;
-  feels_like?: number;
-  humidity?: number;
-  pressure?: number;
-  wind_speed?: number;
-  wind_deg?: number;
-  pop?: number; // 0..1
-  weather: OpenWeatherWeatherEntry[];
-}
-
-interface OpenWeatherDailyTemp {
-  day: number;
-  min: number;
-  max: number;
-}
-
-interface OpenWeatherDailyFeelsLike {
-  day: number;
-}
-
-interface OpenWeatherDailyEntry {
-  dt: number;
-  temp: OpenWeatherDailyTemp;
-  feels_like?: OpenWeatherDailyFeelsLike;
-  humidity?: number;
-  pressure?: number;
-  wind_speed?: number;
-  wind_deg?: number;
-  pop?: number; // 0..1
-  weather: OpenWeatherWeatherEntry[];
-}
-
-interface OpenWeatherAlertEntry {
-  sender_name?: string;
-  event?: string;
-  start?: number;
-  end?: number;
-  description?: string;
-  tags?: string[];
-}
-
-interface OpenWeatherOneCallResponse {
-  lat: number;
-  lon: number;
-  timezone: string;
-  timezone_offset: number;
-  current?: OpenWeatherCurrentBlock;
-  hourly?: OpenWeatherHourlyEntry[];
-  daily?: OpenWeatherDailyEntry[];
-  alerts?: OpenWeatherAlertEntry[];
-}
+const CURRENT_BASE_URL = "https://api.openweathermap.org/data/2.5/weather";
+const FORECAST_BASE_URL = "https://api.openweathermap.org/data/2.5/forecast";
 
 export interface WeatherService {
   fetchWeatherBundle(location: LocationRef): Promise<WeatherBundle>;
 }
 
-function getApiKeyOrThrow(): string {
+// ---------- API key & shared helpers ----------
+
+export function getApiKeyOrThrow(): string {
   const testOverride =
     typeof globalThis !== "undefined"
       ? (globalThis as any).__TEST_OPENWEATHER_API_KEY__
@@ -120,18 +49,25 @@ function getApiKeyOrThrow(): string {
   return apiKey;
 }
 
-function buildOneCallUrl(lat: number, lon: number, apiKey: string): string {
-  const url = new URL(ONE_CALL_BASE_URL);
+function buildCurrentUrl(lat: number, lon: number, apiKey: string): string {
+  const url = new URL(CURRENT_BASE_URL);
   url.searchParams.set("lat", lat.toString());
   url.searchParams.set("lon", lon.toString());
   url.searchParams.set("appid", apiKey);
   url.searchParams.set("units", "metric");
-  // Keep hourly/daily/alerts (exclude only minutely)
-  url.searchParams.set("exclude", "minutely");
   return url.toString();
 }
 
-function mapMainToConditionCode(
+function buildForecastUrl(lat: number, lon: number, apiKey: string): string {
+  const url = new URL(FORECAST_BASE_URL);
+  url.searchParams.set("lat", lat.toString());
+  url.searchParams.set("lon", lon.toString());
+  url.searchParams.set("appid", apiKey);
+  url.searchParams.set("units", "metric");
+  return url.toString();
+}
+
+export function mapMainToConditionCode(
   main: string,
   id: number
 ): WeatherConditionCode {
@@ -157,15 +93,87 @@ function mapMainToConditionCode(
   return "other";
 }
 
-function toIsoUtc(unixSeconds: number): string {
+export function toIsoUtc(unixSeconds: number): string {
   return new Date(unixSeconds * 1000).toISOString();
 }
 
-async function fetchOneCall(
-  location: LocationRef
-): Promise<OpenWeatherOneCallResponse> {
-  const apiKey = getApiKeyOrThrow();
-  const url = buildOneCallUrl(location.lat, location.lon, apiKey);
+function buildProviderMetadata(): ProviderMetadata {
+  return {
+    providerName: "OpenWeatherMap",
+    attributionText: "Powered by OpenWeather (2.5)",
+    expectedUpdateIntervalMinutes: 10,
+  };
+}
+
+// ---------- 2.5 API response types ----------
+
+interface OpenWeatherWeatherEntry {
+  id: number;
+  main: string;
+  description: string;
+  icon: string;
+}
+
+interface OpenWeather2_5WeatherResponse {
+  coord?: {
+    lon?: number;
+    lat?: number;
+  };
+  weather?: OpenWeatherWeatherEntry[];
+  main?: {
+    temp?: number;
+    feels_like?: number;
+    humidity?: number;
+    pressure?: number;
+  };
+  wind?: {
+    speed?: number;
+    deg?: number;
+  };
+  dt?: number;
+  sys?: {
+    country?: string;
+  };
+  timezone?: number;
+  name?: string;
+}
+
+interface OpenWeather2_5ForecastEntry {
+  dt?: number;
+  main?: {
+    temp?: number;
+    temp_min?: number;
+    temp_max?: number;
+    humidity?: number;
+    pressure?: number;
+  };
+  weather?: OpenWeatherWeatherEntry[];
+  wind?: {
+    speed?: number;
+    deg?: number;
+  };
+  pop?: number;
+}
+
+interface OpenWeather2_5ForecastResponse {
+  list?: OpenWeather2_5ForecastEntry[];
+  city?: {
+    coord?: {
+      lat?: number;
+      lon?: number;
+    };
+    name?: string;
+    country?: string;
+  };
+}
+
+// ---------- Low-level fetchers (2.5 endpoints) ----------
+
+async function fetchCurrent2_5(
+  location: LocationRef,
+  apiKey: string
+): Promise<OpenWeather2_5WeatherResponse> {
+  const url = buildCurrentUrl(location.lat, location.lon, apiKey);
 
   let response: Response;
   try {
@@ -173,7 +181,8 @@ async function fetchOneCall(
   } catch {
     const error: WeatherError = {
       kind: "network",
-      message: "Network error while calling OpenWeather One Call endpoint",
+      message:
+        "Network error while calling OpenWeather current weather endpoint (2.5)",
     };
     throw error;
   }
@@ -186,7 +195,7 @@ async function fetchOneCall(
 
     const error: WeatherError = {
       kind: response.status === 429 ? "rate_limit" : "http",
-      message: `OpenWeather HTTP error: ${response.status}`,
+      message: `OpenWeather HTTP error (current 2.5): ${response.status}`,
       statusCode: response.status,
       retryAfterMs,
     };
@@ -194,51 +203,110 @@ async function fetchOneCall(
   }
 
   try {
-    const json = (await response.json()) as OpenWeatherOneCallResponse;
+    const json = (await response.json()) as OpenWeather2_5WeatherResponse;
     return json;
   } catch {
     const error: WeatherError = {
       kind: "contract",
-      message: "Invalid JSON from OpenWeather One Call endpoint",
+      message:
+        "Invalid JSON from OpenWeather current weather endpoint (2.5)",
     };
     throw error;
   }
 }
 
-function buildDomainLocation(
-  requested: LocationRef,
-  payload: OpenWeatherOneCallResponse
-): LocationRef {
-  return {
-    ...requested,
-    lat: payload.lat ?? requested.lat,
-    lon: payload.lon ?? requested.lon,
-    timezone: payload.timezone ?? requested.timezone,
-  };
-}
-
-function buildProviderMetadata(): ProviderMetadata {
-  return {
-    providerName: "OpenWeatherMap",
-    attributionText: "Powered by OpenWeather",
-    expectedUpdateIntervalMinutes: 10,
-  };
-}
-
-function mapCurrent(
+async function fetchForecast2_5(
   location: LocationRef,
-  payload: OpenWeatherOneCallResponse
-): CurrentWeather {
-  const current = payload.current;
-  if (!current) {
+  apiKey: string
+): Promise<OpenWeather2_5ForecastResponse> {
+  const url = buildForecastUrl(location.lat, location.lon, apiKey);
+
+  let response: Response;
+  try {
+    response = await fetch(url);
+  } catch {
+    const error: WeatherError = {
+      kind: "network",
+      message:
+        "Network error while calling OpenWeather forecast endpoint (2.5)",
+    };
+    throw error;
+  }
+
+  if (!response.ok) {
+    const retryAfterHeader = response.headers.get("Retry-After");
+    const retryAfterMs = retryAfterHeader
+      ? Number(retryAfterHeader) * 1000
+      : undefined;
+
+    const error: WeatherError = {
+      kind: response.status === 429 ? "rate_limit" : "http",
+      message: `OpenWeather HTTP error (forecast 2.5): ${response.status}`,
+      statusCode: response.status,
+      retryAfterMs,
+    };
+    throw error;
+  }
+
+  try {
+    const json = (await response.json()) as OpenWeather2_5ForecastResponse;
+    return json;
+  } catch {
     const error: WeatherError = {
       kind: "contract",
-      message: "Missing current block in OpenWeather One Call response",
+      message:
+        "Invalid JSON from OpenWeather forecast endpoint (2.5)",
+    };
+    throw error;
+  }
+}
+
+// ---------- Mapping helpers ----------
+
+function buildDomainLocationFromCurrent(
+  requested: LocationRef,
+  payload: OpenWeather2_5WeatherResponse
+): LocationRef {
+  const coord = payload.coord ?? {};
+  return {
+    ...requested,
+    lat:
+      typeof coord.lat === "number" && !Number.isNaN(coord.lat)
+        ? coord.lat
+        : requested.lat,
+    lon:
+      typeof coord.lon === "number" && !Number.isNaN(coord.lon)
+        ? coord.lon
+        : requested.lon,
+    name: payload.name ?? requested.name,
+    countryCode: payload.sys?.country ?? requested.countryCode,
+    // 2.5 only exposes numeric timezone offset; we keep the existing timezone string if any.
+    timezone: requested.timezone,
+  };
+}
+
+function mapCurrentFrom2_5(
+  location: LocationRef,
+  payload: OpenWeather2_5WeatherResponse
+): CurrentWeather {
+  const main = payload.main;
+  const dt = payload.dt;
+
+  if (
+    !main ||
+    typeof main.temp !== "number" ||
+    Number.isNaN(main.temp) ||
+    typeof dt !== "number" ||
+    Number.isNaN(dt)
+  ) {
+    const error: WeatherError = {
+      kind: "contract",
+      message: "Missing fields in OpenWeather current weather response (2.5)",
     };
     throw error;
   }
 
-  const weatherEntry = current.weather?.[0];
+  const weatherEntry = payload.weather?.[0];
 
   const conditionCode: WeatherConditionCode = weatherEntry
     ? mapMainToConditionCode(weatherEntry.main, weatherEntry.id)
@@ -248,37 +316,38 @@ function mapCurrent(
 
   return {
     location,
-    observedAt: toIsoUtc(current.dt),
-    temperature: current.temp,
-    feelsLike: current.feels_like,
+    observedAt: toIsoUtc(dt),
+    temperature: main.temp,
+    feelsLike: main.feels_like,
     conditionCode,
     conditionLabel,
-    humidity: current.humidity,
-    pressure: current.pressure,
-    windSpeed: current.wind_speed,
-    windDirection: current.wind_deg,
+    humidity: main.humidity,
+    pressure: main.pressure,
+    windSpeed: payload.wind?.speed,
+    windDirection: payload.wind?.deg,
   };
 }
 
-function downsampleHourlyTo3h(
-  hourly: OpenWeatherHourlyEntry[] | undefined
-): OpenWeatherHourlyEntry[] {
-  if (!hourly || hourly.length === 0) return [];
-  return hourly.filter((_, index) => index % 3 === 0);
-}
-
-function mapHourlyToTimeline(
+function mapForecastTimelinesFrom2_5(
   location: LocationRef,
-  hourly: OpenWeatherHourlyEntry[] | undefined
-): ForecastTimeline | null {
-  const entries = downsampleHourlyTo3h(hourly);
-  if (!entries.length) return null;
+  payload: OpenWeather2_5ForecastResponse
+): ForecastTimeline[] {
+  const entries = payload.list ?? [];
+  if (!entries.length) {
+    return [];
+  }
 
-  const slices: ForecastSlice[] = entries
+  const slices3h: ForecastSlice[] = entries
     .map((entry) => {
-      if (typeof entry.dt !== "number" || Number.isNaN(entry.dt)) return null;
-      if (typeof entry.temp !== "number" || Number.isNaN(entry.temp))
+      if (
+        typeof entry.dt !== "number" ||
+        Number.isNaN(entry.dt) ||
+        !entry.main ||
+        typeof entry.main.temp !== "number" ||
+        Number.isNaN(entry.main.temp)
+      ) {
         return null;
+      }
 
       const weatherEntry = entry.weather?.[0];
       const conditionCode: WeatherConditionCode = weatherEntry
@@ -289,172 +358,132 @@ function mapHourlyToTimeline(
 
       const slice: ForecastSlice = {
         timestamp: toIsoUtc(entry.dt),
-        temperature: entry.temp,
+        temperature: entry.main.temp,
         conditionCode,
         conditionLabel,
         precipitationProbability:
           typeof entry.pop === "number"
             ? Math.min(Math.max(entry.pop, 0), 1)
             : undefined,
-        windSpeed: entry.wind_speed,
-        windDirection: entry.wind_deg,
+        windSpeed: entry.wind?.speed,
+        windDirection: entry.wind?.deg,
+        minTemperature: entry.main.temp_min,
+        maxTemperature: entry.main.temp_max,
       };
 
       return slice;
     })
     .filter((s): s is ForecastSlice => s !== null);
 
-  if (!slices.length) return null;
+  const timelines: ForecastTimeline[] = [];
 
-  return {
-    location,
-    granularity: "3h",
-    slices,
-  };
+  if (slices3h.length > 0) {
+    timelines.push({
+      location,
+      granularity: "3h",
+      slices: slices3h,
+    });
+  } else if (entries.length > 0) {
+    trackWeatherDataDegraded({
+      provider: "openweather",
+      operation: "bundle_2_5",
+      aspect: "forecast_hourly",
+      reason: "forecast_input_without_output_timeline",
+      hadInput: true,
+      hasOutput: false,
+      timestamp: Date.now(),
+    });
+  }
+
+  const dailyTimeline = buildDailyTimelineFrom3h(location, slices3h);
+  if (dailyTimeline) {
+    timelines.push(dailyTimeline);
+  } else if (slices3h.length > 0) {
+    trackWeatherDataDegraded({
+      provider: "openweather",
+      operation: "bundle_2_5",
+      aspect: "forecast_daily",
+      reason: "unable_to_aggregate_daily_from_3h",
+      hadInput: true,
+      hasOutput: false,
+      timestamp: Date.now(),
+    });
+  }
+
+  return timelines;
 }
 
-function mapDailyToTimeline(
+function buildDailyTimelineFrom3h(
   location: LocationRef,
-  daily: OpenWeatherDailyEntry[] | undefined
+  slices3h: ForecastSlice[]
 ): ForecastTimeline | null {
-  if (!daily || daily.length === 0) return null;
+  if (!slices3h.length) return null;
 
-  const slices: ForecastSlice[] = daily
-    .map((entry) => {
-      if (typeof entry.dt !== "number" || Number.isNaN(entry.dt)) return null;
-      if (!entry.temp || typeof entry.temp.day !== "number") return null;
+  const byDay = new Map<string, ForecastSlice[]>();
 
-      const weatherEntry = entry.weather?.[0];
-      const conditionCode: WeatherConditionCode = weatherEntry
-        ? mapMainToConditionCode(weatherEntry.main, weatherEntry.id)
-        : "other";
+  for (const slice of slices3h) {
+    const date = new Date(slice.timestamp);
+    if (Number.isNaN(date.getTime())) continue;
 
-      const conditionLabel = weatherEntry?.description ?? "Unknown";
+    const dayKey = date.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
+    const existing = byDay.get(dayKey);
+    if (existing) {
+      existing.push(slice);
+    } else {
+      byDay.set(dayKey, [slice]);
+    }
+  }
 
-      const slice: ForecastSlice = {
-        timestamp: toIsoUtc(entry.dt),
-        temperature: entry.temp.day,
-        conditionCode,
-        conditionLabel,
-        precipitationProbability:
-          typeof entry.pop === "number"
-            ? Math.min(Math.max(entry.pop, 0), 1)
-            : undefined,
-        windSpeed: entry.wind_speed,
-        windDirection: entry.wind_deg,
-        minTemperature: entry.temp.min,
-        maxTemperature: entry.temp.max,
-      };
+  const dailySlices: ForecastSlice[] = [];
 
-      return slice;
-    })
-    .filter((s): s is ForecastSlice => s !== null);
+  for (const [dayKey, daySlices] of byDay) {
+    if (!daySlices.length) continue;
 
-  if (!slices.length) return null;
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    const refSlice = daySlices[0];
+
+    for (const s of daySlices) {
+      const tempMin =
+        typeof s.minTemperature === "number" ? s.minTemperature : s.temperature;
+      const tempMax =
+        typeof s.maxTemperature === "number" ? s.maxTemperature : s.temperature;
+
+      if (tempMin < min) min = tempMin;
+      if (tempMax > max) max = tempMax;
+    }
+
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      continue;
+    }
+
+    const midTimestamp = `${dayKey}T12:00:00.000Z`;
+
+    dailySlices.push({
+      timestamp: midTimestamp,
+      temperature: (min + max) / 2,
+      conditionCode: refSlice.conditionCode,
+      conditionLabel: refSlice.conditionLabel,
+      precipitationProbability: undefined,
+      windSpeed: undefined,
+      windDirection: undefined,
+      minTemperature: min,
+      maxTemperature: max,
+    });
+  }
+
+  if (!dailySlices.length) {
+    return null;
+  }
 
   return {
     location,
     granularity: "daily",
-    slices,
+    slices: dailySlices,
   };
 }
 
-function mapAlertSeverity(entry: OpenWeatherAlertEntry): WeatherAlertSeverity {
-  const tags = (entry.tags ?? []).map((t) => t.toLowerCase());
-  const title = (entry.event ?? "").toLowerCase();
-  const desc = (entry.description ?? "").toLowerCase();
-
-  if (
-    tags.includes("extreme") ||
-    title.includes("red") ||
-    desc.includes("red warning")
-  ) {
-    return "extreme";
-  }
-  if (
-    tags.includes("severe") ||
-    title.includes("warning") ||
-    desc.includes("warning")
-  ) {
-    return "severe";
-  }
-  if (tags.includes("moderate") || title.includes("watch")) {
-    return "moderate";
-  }
-  if (tags.includes("minor") || tags.includes("advisory")) {
-    return "minor";
-  }
-  return "unknown";
-}
-
-function mapAlertType(entry: OpenWeatherAlertEntry): WeatherAlertType {
-  const title = (entry.event ?? "").toLowerCase();
-  const desc = (entry.description ?? "").toLowerCase();
-  const tags = (entry.tags ?? []).map((t) => t.toLowerCase());
-  const haystack = `${title} ${desc} ${tags.join(" ")}`;
-
-  if (haystack.includes("wind")) return "wind";
-  if (haystack.includes("storm") || haystack.includes("thunder"))
-    return "storm";
-  if (haystack.includes("rain") || haystack.includes("flood")) return "rain";
-  if (haystack.includes("snow") || haystack.includes("ice")) return "snow";
-  if (haystack.includes("heat")) return "heatwave";
-  if (haystack.includes("cold") || haystack.includes("frost"))
-    return "coldwave";
-  if (haystack.includes("fog")) return "fog";
-
-  return "other";
-}
-
-function hashString(value: string): string {
-  let hash = 0;
-  for (let i = 0; i < value.length; i += 1) {
-    hash = (hash * 31 + value.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash).toString(16);
-}
-
-function mapAlerts(
-  location: LocationRef,
-  alerts: OpenWeatherAlertEntry[] | undefined
-): WeatherAlert[] {
-  if (!alerts || alerts.length === 0) return [];
-
-  return alerts.map((entry, index) => {
-    const title = (entry.event ?? "Weather alert").trim();
-    const description = (entry.description ?? "").trim();
-    const severity = mapAlertSeverity(entry);
-    const alertType = mapAlertType(entry);
-
-    const idBase = `${location.lat.toFixed(2)},${location.lon.toFixed(
-      2
-    )}:${entry.start ?? "na"}:${title}`;
-    const id = `owm-alert:${index}:${hashString(idBase)}`;
-
-    const startsAt =
-      typeof entry.start === "number" && !Number.isNaN(entry.start)
-        ? toIsoUtc(entry.start)
-        : undefined;
-
-    const endsAt =
-      typeof entry.end === "number" && !Number.isNaN(entry.end)
-        ? toIsoUtc(entry.end)
-        : undefined;
-
-    return {
-      id,
-      alertType,
-      severity,
-      title,
-      description,
-      startsAt,
-      endsAt,
-      locations: [location],
-      source: entry.sender_name,
-      tags: entry.tags,
-    };
-  });
-}
+// ---------- Public service ----------
 
 export class OpenWeatherService implements WeatherService {
   async fetchWeatherBundle(location: LocationRef): Promise<WeatherBundle> {
@@ -465,70 +494,47 @@ export class OpenWeatherService implements WeatherService {
 
     trackWeatherApiRequest({
       provider: "openweather",
-      operation: "onecall_bundle",
+      operation: "bundle_2_5",
       location,
       timestamp: Date.now(),
     });
 
     try {
-      const raw = await fetchOneCall(location);
+      const apiKey = getApiKeyOrThrow();
 
-      const domainLocation = buildDomainLocation(location, raw);
-      const provider = buildProviderMetadata();
+      const [currentRaw, forecastRaw] = await Promise.all([
+        fetchCurrent2_5(location, apiKey),
+        fetchForecast2_5(location, apiKey),
+      ]);
 
-      const current = mapCurrent(domainLocation, raw);
+      const domainLocation = buildDomainLocationFromCurrent(
+        location,
+        currentRaw
+      );
 
-      const timelines: ForecastTimeline[] = [];
-      const hourlyTimeline = mapHourlyToTimeline(domainLocation, raw.hourly);
-      const dailyTimeline = mapDailyToTimeline(domainLocation, raw.daily);
+      const current = mapCurrentFrom2_5(domainLocation, currentRaw);
+      const timelines = mapForecastTimelinesFrom2_5(
+        domainLocation,
+        forecastRaw
+      );
 
-      if (hourlyTimeline) {
-        timelines.push(hourlyTimeline);
-      } else if (raw.hourly && raw.hourly.length > 0) {
-        trackWeatherDataDegraded({
-          provider: "openweather",
-          operation: "onecall_bundle",
-          aspect: "forecast_hourly",
-          reason: "hourly_input_without_output_timeline",
-          hadInput: true,
-          hasOutput: false,
-          timestamp: Date.now(),
-        });
-      }
+      const alerts: WeatherAlert[] = [];
 
-      if (dailyTimeline) {
-        timelines.push(dailyTimeline);
-      } else if (raw.daily && raw.daily.length > 0) {
-        trackWeatherDataDegraded({
-          provider: "openweather",
-          operation: "onecall_bundle",
-          aspect: "forecast_daily",
-          reason: "daily_input_without_output_timeline",
-          hadInput: true,
-          hasOutput: false,
-          timestamp: Date.now(),
-        });
-      }
-
-      const alerts = mapAlerts(domainLocation, raw.alerts);
-
-      if (raw.alerts && raw.alerts.length > 0 && alerts.length === 0) {
-        trackWeatherDataDegraded({
-          provider: "openweather",
-          operation: "onecall_bundle",
-          aspect: "alerts",
-          reason: "alerts_input_without_output",
-          hadInput: true,
-          hasOutput: false,
-          timestamp: Date.now(),
-        });
-      }
+      trackWeatherDataDegraded({
+        provider: "openweather",
+        operation: "bundle_2_5",
+        aspect: "alerts",
+        reason: "alerts_not_available_in_free_2_5",
+        hadInput: false,
+        hasOutput: false,
+        timestamp: Date.now(),
+      });
 
       const bundle: WeatherBundle = {
         current,
         forecastTimelines: timelines,
         alerts,
-        provider,
+        provider: buildProviderMetadata(),
       };
 
       const finishedAt =
@@ -538,7 +544,7 @@ export class OpenWeatherService implements WeatherService {
 
       trackWeatherApiSuccess({
         provider: "openweather",
-        operation: "onecall_bundle",
+        operation: "bundle_2_5",
         location: domainLocation,
         durationMs: finishedAt - startedAt,
         timestamp: Date.now(),
@@ -555,12 +561,12 @@ export class OpenWeatherService implements WeatherService {
         (e as WeatherError) ??
         ({
           kind: "unknown",
-          message: "Unknown error in fetchWeatherBundle",
+          message: "Unknown error in fetchWeatherBundle (2.5)",
         } as WeatherError);
 
       trackWeatherApiError({
         provider: "openweather",
-        operation: "onecall_bundle",
+        operation: "bundle_2_5",
         location,
         durationMs: finishedAt - startedAt,
         error,

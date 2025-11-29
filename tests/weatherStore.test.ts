@@ -86,21 +86,14 @@ const fakeBundle: WeatherBundle = {
 
 describe("weatherStore ensure* methods", () => {
   beforeEach(() => {
-    useWeatherStore.setState({
+    // Reset only the resource maps and TTL, keep actions as implemented
+    useWeatherStore.setState((state) => ({
+      ...state,
       currentByLocationKey: {},
       forecastByLocationKey: {},
       alertsByLocationKey: {},
       bundleTtlMs: 5 * 60 * 1000,
-      ensureCurrentWeather: useWeatherStore.getState().ensureCurrentWeather,
-      ensureForecast: useWeatherStore.getState().ensureForecast,
-      ensureAlerts: useWeatherStore.getState().ensureAlerts,
-      clearCurrentForLocation:
-        useWeatherStore.getState().clearCurrentForLocation,
-      clearForecastForLocation:
-        useWeatherStore.getState().clearForecastForLocation,
-      clearAlertsForLocation:
-        useWeatherStore.getState().clearAlertsForLocation,
-    });
+    }));
     fetchWeatherBundleMock.mockReset();
   });
 
