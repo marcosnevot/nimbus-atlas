@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - No unreleased changes yet.
 
+## [0.5.0] - 2025-11-30
+
+### Added
+
+#### Location search & map focus
+
+- Wired the Top Bar search input into a real location search flow backed by OpenWeather geocoding.
+- Selecting a search result now updates the selected location, opens the Side Panel and recenters the globe on the chosen place with a smooth zoom to a sensible level.
+- Extended the map core with a `focusLocation` prop on `MapRoot` so search (and future flows like presets) can drive map camera changes without leaking MapLibre internals across the app.
+
+#### Documentation & contribution workflow
+
+- Added an `ARCHITECTURE.md` that documents the map-centric layout, weather domain boundaries, state stores and the overall frontend layering.
+- Added a `README.md` tailored for portfolio usage, including high-level overview, tech stack, feature highlights and local development instructions.
+- Added a `CONTRIBUTING.md` with guidelines for local setup, coding style, testing and pull request expectations, aligned with the rest of the portfolio projects.
+
+### Changed
+
+- Refined the global search UX in the Top Bar so that validation and inline error messaging are rendered next to the search field instead of below it, keeping the header compact.
+- Updated `MapRoot` tests to match the real default map configuration (Madrid as initial center and zoom level 4) while preserving coverage for viewport emission on load and `moveend`.
+
+### Removed
+
+- Deleted the unused OpenWeather One Call 3.0 integration files, keeping the weather integration strictly focused on the 2.5 APIs that power the current Nimbus Atlas demo.
+
 ## [0.4.0] - 2025-11-30
 
 ### Added
