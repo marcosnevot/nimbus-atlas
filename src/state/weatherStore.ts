@@ -1,7 +1,7 @@
 // src/state/weatherStore.ts
 
 import { create } from "zustand";
-import {
+import type {
   CurrentWeather,
   ForecastTimeline,
   WeatherAlert,

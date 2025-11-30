@@ -1,6 +1,6 @@
 // src/services/openWeatherService.ts
 
-import {
+import type {
   CurrentWeather,
   ForecastTimeline,
   ForecastSlice,
