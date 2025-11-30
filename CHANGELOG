@@ -82,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Animated pill background that slides between “Map” and “Satellite”.
   - Better alignment with the dark glassmorphism map overlay style.
 - Adjusted the Side Panel opening rules so:
-  - Clicking a location on the globe auto-abre el panel si estaba cerrado.
+  - Clicking a location on the globe auto-open panel if it was closed.
   - Clearing selection from a “space” click also shows the empty state within the panel.
 
 ### Removed
