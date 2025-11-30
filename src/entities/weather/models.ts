@@ -114,7 +114,7 @@ export interface WeatherBundle {
   provider: ProviderMetadata;
 }
 
-// City weather overlay view models (Phase 5)
+// City weather overlay view models
 
 export interface CityWeatherPoint {
   id: string;

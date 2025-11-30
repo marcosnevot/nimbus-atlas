@@ -207,22 +207,25 @@ export const useWeatherStore = create<WeatherState>((set, get) => {
 
     clearCurrentForLocation(locationKey: string) {
       set((state) => {
-        const { [locationKey]: _, ...rest } = state.currentByLocationKey;
-        return { currentByLocationKey: rest };
+        const next = { ...state.currentByLocationKey };
+        delete next[locationKey];
+        return { currentByLocationKey: next };
       });
     },
 
     clearForecastForLocation(locationKey: string) {
       set((state) => {
-        const { [locationKey]: _, ...rest } = state.forecastByLocationKey;
-        return { forecastByLocationKey: rest };
+        const next = { ...state.forecastByLocationKey };
+        delete next[locationKey];
+        return { forecastByLocationKey: next };
       });
     },
 
     clearAlertsForLocation(locationKey: string) {
       set((state) => {
-        const { [locationKey]: _, ...rest } = state.alertsByLocationKey;
-        return { alertsByLocationKey: rest };
+        const next = { ...state.alertsByLocationKey };
+        delete next[locationKey];
+        return { alertsByLocationKey: next };
       });
     },
   };

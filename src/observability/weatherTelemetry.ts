@@ -101,22 +101,18 @@ function withSanitizedLocation<T extends { location?: LocationRef }>(
 const defaultSink: WeatherTelemetrySink = {
   onApiRequest(event) {
     if (!isDev) return;
-    // eslint-disable-next-line no-console
     console.debug("[weather][request]", event);
   },
   onApiSuccess(event) {
     if (!isDev) return;
-    // eslint-disable-next-line no-console
     console.debug("[weather][success]", event);
   },
   onApiError(event) {
     if (!isDev) return;
-    // eslint-disable-next-line no-console
     console.debug("[weather][error]", event);
   },
   onDataDegraded(event) {
     if (!isDev) return;
-    // eslint-disable-next-line no-console
     console.debug("[weather][degraded]", event);
   },
 };

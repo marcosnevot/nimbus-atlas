@@ -1,5 +1,5 @@
 // tests/fixtures/openWeatherCurrentFixture.ts
-
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { OpenWeatherCurrentResponse } from '../../src/integrations/weather/openWeatherTypes';
 
 export const openWeatherCurrentSuccessFixture: OpenWeatherCurrentResponse = {

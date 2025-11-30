@@ -27,10 +27,14 @@ export interface WeatherService {
 
 // ---------- API key & shared helpers ----------
 
+type TestOverrideGlobal = typeof globalThis & {
+  __TEST_OPENWEATHER_API_KEY__?: string;
+};
+
 export function getApiKeyOrThrow(): string {
   const testOverride =
     typeof globalThis !== "undefined"
-      ? (globalThis as any).__TEST_OPENWEATHER_API_KEY__
+      ? (globalThis as TestOverrideGlobal).__TEST_OPENWEATHER_API_KEY__
       : undefined;
 
   const apiKey =
@@ -587,12 +591,11 @@ export class OpenWeatherService implements WeatherService {
           ? performance.now()
           : Date.now();
 
-      const error =
-        (e as WeatherError) ??
-        ({
+      const error: WeatherError =
+        (e as WeatherError) ?? {
           kind: "unknown",
           message: "Unknown error in fetchWeatherBundle (2.5)",
-        } as WeatherError);
+        };
 
       trackWeatherApiError({
         provider: "openweather",

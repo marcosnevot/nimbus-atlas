@@ -22,7 +22,6 @@ const isDev = envMode !== "production";
 const defaultSink: AppTelemetrySink = {
   onEvent(event: AppEvent) {
     if (!isDev) return;
-    // eslint-disable-next-line no-console
     console.debug("[app][event]", event);
   },
 };
@@ -38,7 +37,6 @@ export function trackAppEvent(event: AppEvent): void {
     activeSink.onEvent(event);
   } catch (error) {
     if (isDev) {
-      // eslint-disable-next-line no-console
       console.warn("[app][event] sink error", error);
     }
   }
@@ -62,7 +60,6 @@ export function log(
 
   const prefix = `[app][${level}]`;
 
-  // eslint-disable-next-line no-console
   const consoleMethod =
     level === "debug"
       ? console.debug
