@@ -49,8 +49,6 @@ export const TopBar: React.FC = () => {
       setSelectedLocation({
         lng,
         lat,
-        name: result.name,
-        countryCode: result.countryCode,
       });
 
       // Let the map camera focus the searched location

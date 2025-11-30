@@ -4,6 +4,7 @@ import { useMapStore } from "../../state/mapStore";
 import { useSelectedLocationCurrentWeather } from "../../hooks/useSelectedLocationCurrentWeather";
 import { useSelectedLocationForecast } from "../../hooks/useSelectedLocationForecast";
 import { Skeleton } from "../../ui/Skeleton";
+import type { MapSelectedLocation } from "../../features/map/MapRoot";
 import type { WeatherError } from "../../entities/weather/models";
 
 const formatCoord = (value: number) => value.toFixed(4);
@@ -67,11 +68,22 @@ function buildCurrentWeatherErrorMessage(error?: WeatherError): string {
 
 type SidePanelProps = {
   isOpen: boolean;
+  selectedLocation?: MapSelectedLocation | null;
 };
 
-export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
-  const selectedLocation = useMapStore((state) => state.selectedLocation);
+export const SidePanel: React.FC<SidePanelProps> = ({
+  isOpen,
+  selectedLocation,
+}) => {
+  const storeSelectedLocation = useMapStore(
+    (state) => state.selectedLocation
+  ) as MapSelectedLocation | null;
   const viewport = useMapStore((state) => state.viewport);
+
+  const effectiveSelectedLocation =
+    typeof selectedLocation === "undefined"
+      ? storeSelectedLocation
+      : selectedLocation;
 
   const { resource: weatherResource } = useSelectedLocationCurrentWeather();
   const { resource: forecastResource } = useSelectedLocationForecast();
@@ -94,7 +106,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
     ? dailyTimeline.slices.slice(0, 4)
     : [];
 
-  const hasSelection = Boolean(selectedLocation);
+  const hasSelection = Boolean(effectiveSelectedLocation);
 
   const isWeatherLoading =
     hasSelection && (weatherStatus === "idle" || weatherStatus === "loading");
@@ -113,30 +125,36 @@ export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
       data-has-selection={hasSelection ? "true" : "false"}
       aria-busy={isBusy}
     >
-      <h2 id="side-panel-title" className="na-side-panel__title">Location details</h2>
+      <h2 id="side-panel-title" className="na-side-panel__title">
+        Location details
+      </h2>
 
-      {!selectedLocation && (
+      {!effectiveSelectedLocation && (
         <p className="na-side-panel__placeholder">
           Click on the map to select a location and see its details here.
         </p>
       )}
 
-      {selectedLocation && (
+      {effectiveSelectedLocation && (
         <section className="na-side-panel__section">
           <h3 className="na-side-panel__subtitle">Selected location</h3>
 
-          {selectedLocation.name && (
+          {effectiveSelectedLocation.name && (
             <p className="na-side-panel__location-name">
-              {selectedLocation.name}
-              {selectedLocation.countryCode
-                ? `, ${selectedLocation.countryCode}`
+              {effectiveSelectedLocation.name}
+              {effectiveSelectedLocation.countryCode
+                ? `, ${effectiveSelectedLocation.countryCode}`
                 : ""}
             </p>
           )}
 
           <p className="na-side-panel__coords">
-            <span>Latitude: {formatCoord(selectedLocation.lat)}</span>
-            <span>Longitude: {formatCoord(selectedLocation.lng)}</span>
+            <span>
+              Latitude: {formatCoord(effectiveSelectedLocation.lat)}
+            </span>
+            <span>
+              Longitude: {formatCoord(effectiveSelectedLocation.lng)}
+            </span>
           </p>
 
           {/* Current weather */}
@@ -290,7 +308,9 @@ export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
                             typeof slice.maxTemperature === "number"
                               ? `${Math.round(
                                   slice.minTemperature
-                                )}° / ${Math.round(slice.maxTemperature)}°C`
+                                )}° / ${Math.round(
+                                  slice.maxTemperature
+                                )}°C`
                               : `${Math.round(slice.temperature)}°C`}
                           </span>
                           <span className="na-side-panel__forecast-cond">

@@ -219,10 +219,8 @@ describe("SidePanel (location & weather view)", () => {
 
     render(<SidePanel isOpen={true} />);
 
-    // Seguimos viendo el bloque de forecast
     expect(await screen.findByText("Forecast")).toBeInTheDocument();
 
-    // Mensaje de “sin datos de forecast” coherente con el componente
     expect(
       await screen.findByText(/No forecast data available for this location\./i)
     ).toBeInTheDocument();

@@ -6,14 +6,9 @@ import { MapRoot } from "../../features/map/MapRoot";
 import type {
   MapViewport,
   MapSelectedLocation,
-  MapProjection,
 } from "../../features/map/MapRoot";
 import { useMapStore } from "../../state/mapStore";
 import { useUiStore } from "../../state/uiStore";
-import {
-  MAP_STYLE_URL_DARK,
-  MAP_STYLE_URL_SATELLITE,
-} from "../../config/map.config";
 
 export const MapLayout: React.FC = () => {
   const setViewport = useMapStore((state) => state.setViewport);
@@ -47,19 +42,6 @@ export const MapLayout: React.FC = () => {
     clearSelectedLocation();
   };
 
-
-  // Always use globe projection; only swap the basemap style
-  const mapStyleConfig: { styleUrl: string; projection: MapProjection } =
-    baseMapStyle === "dark"
-      ? {
-        styleUrl: MAP_STYLE_URL_DARK,
-        projection: "globe",
-      }
-      : {
-        styleUrl: MAP_STYLE_URL_SATELLITE,
-        projection: "globe",
-      };
-
   return (
     <div className="na-map-layout">
       <div
@@ -67,8 +49,6 @@ export const MapLayout: React.FC = () => {
         data-side-panel-open={isSidePanelOpen ? "true" : "false"}
       >
         <MapRoot
-          styleUrl={mapStyleConfig.styleUrl}
-          projection={mapStyleConfig.projection}
           onViewportChange={handleViewportChange}
           onMapClick={handleMapClick}
           onMapReady={setMapReady}

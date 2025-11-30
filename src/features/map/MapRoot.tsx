@@ -1,7 +1,12 @@
 // src/features/map/MapRoot.tsx
 import React, { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap, ErrorEvent as MapLibreErrorEvent } from "maplibre-gl";
+import type {
+  Map as MapLibreMap,
+  MapMouseEvent,
+  MapGeoJSONFeature,
+  EaseToOptions,
+} from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import {
@@ -74,21 +79,37 @@ type PlaceProperties = {
   [key: string]: unknown;
 };
 
-type EaseToOptionsLike = {
-  [key: string]: unknown;
-};
-
-type MapWithPatchedEase = MapLibreMap & {
-  easeTo(options: EaseToOptionsLike): void;
-};
-
 function isClickOutsideGlobe(
   map: MapLibreMap,
-  event: maplibregl.MapMouseEvent & maplibregl.EventData
+  event: MapMouseEvent
 ): boolean {
   // Only apply this heuristic in globe mode.
   if (MAP_PROJECTION_TYPE !== "globe") {
     return false;
+  }
+
+  const anyMap = map as MapLibreMap & {
+    unproject?: (p: maplibregl.PointLike) => maplibregl.LngLat;
+    project?: (ll: maplibregl.LngLatLike) => maplibregl.Point;
+  };
+
+  // Prefer precise round-trip detection when available (real MapLibre).
+  if (typeof anyMap.unproject === "function" && typeof anyMap.project === "function") {
+    try {
+      const clickPoint = event.point;
+
+      const lngLat = anyMap.unproject(clickPoint);
+      const projected = anyMap.project(lngLat);
+
+      const dx = clickPoint.x - projected.x;
+      const dy = clickPoint.y - projected.y;
+      const distanceSq = dx * dx + dy * dy;
+
+      const tolerancePx = 4;
+      return distanceSq > tolerancePx * tolerancePx;
+    } catch {
+      // If round-trip detection fails, fall back to the geometric heuristic below.
+    }
   }
 
   const canvas = map.getCanvas() as MapCanvas;
@@ -107,10 +128,12 @@ function isClickOutsideGlobe(
   const distance = Math.sqrt(dx * dx + dy * dy);
 
   const radius = Math.min(width, height) / 2;
-  const effectiveRadius = radius * 0.96; // small margin to keep horizon clicks "inside"
+  const effectiveRadius = radius * 0.9;
 
   return distance > effectiveRadius;
 }
+
+
 
 export const MapRoot: React.FC<MapRootProps> = ({
   initialCenter = DEFAULT_MAP_CENTER,
@@ -129,26 +152,27 @@ export const MapRoot: React.FC<MapRootProps> = ({
   const markersRef = useRef<maplibregl.Marker[]>([]);
 
   // Keep latest callbacks in refs so we do not need them in the init effect deps
-  const viewportCallbackRef = useRef<MapRootProps["onViewportChange"]>();
-  const clickCallbackRef = useRef<MapRootProps["onMapClick"]>();
+  const viewportCallbackRef =
+    useRef<MapRootProps["onViewportChange"] | null>(null);
+  const clickCallbackRef = useRef<MapRootProps["onMapClick"] | null>(null);
   const backgroundClickCallbackRef =
-    useRef<MapRootProps["onMapBackgroundClick"]>();
-  const readyCallbackRef = useRef<MapRootProps["onMapReady"]>();
+    useRef<MapRootProps["onMapBackgroundClick"] | null>(null);
+  const readyCallbackRef = useRef<MapRootProps["onMapReady"] | null>(null);
 
   useEffect(() => {
-    viewportCallbackRef.current = onViewportChange;
+    viewportCallbackRef.current = onViewportChange ?? null;
   }, [onViewportChange]);
 
   useEffect(() => {
-    clickCallbackRef.current = onMapClick;
+    clickCallbackRef.current = onMapClick ?? null;
   }, [onMapClick]);
 
   useEffect(() => {
-    backgroundClickCallbackRef.current = onMapBackgroundClick;
+    backgroundClickCallbackRef.current = onMapBackgroundClick ?? null;
   }, [onMapBackgroundClick]);
 
   useEffect(() => {
-    readyCallbackRef.current = onMapReady;
+    readyCallbackRef.current = onMapReady ?? null;
   }, [onMapReady]);
 
   const emitViewport = (map: MapLibreMap) => {
@@ -176,8 +200,8 @@ export const MapRoot: React.FC<MapRootProps> = ({
 
   // Helper: pick best "place" feature near the click
   function pickBestPlaceFeature(
-    features: maplibregl.MapboxGeoJSONFeature[]
-  ): maplibregl.MapboxGeoJSONFeature | undefined {
+    features: MapGeoJSONFeature[]
+  ): MapGeoJSONFeature | undefined {
     const placeFeatures = features.filter((feature) => {
       const props = feature.properties as PlaceProperties | undefined;
       if (!props) return false;
@@ -250,7 +274,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
   }
 
   function extractPlaceMetadata(
-    feature: maplibregl.MapboxGeoJSONFeature | undefined
+    feature: MapGeoJSONFeature | undefined
   ): { name?: string; countryCode?: string } {
     if (!feature || !feature.properties) {
       return {};
@@ -283,7 +307,6 @@ export const MapRoot: React.FC<MapRootProps> = ({
       style: MAP_STYLE_URL_DARK,
       center: [initialCenter.lng, initialCenter.lat],
       zoom: initialZoom,
-      attributionControl: true,
     });
 
     mapRef.current = map;
@@ -310,9 +333,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
       emitViewport(map);
     };
 
-    const handleMouseMove = (
-      event: maplibregl.MapMouseEvent & maplibregl.EventData
-    ) => {
+    const handleMouseMove = (event: MapMouseEvent) => {
       const canvas = map.getCanvas();
       const hasClickHandler = Boolean(clickCallbackRef.current);
 
@@ -332,7 +353,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
 
         const features = map.queryRenderedFeatures(
           queryBox
-        ) as maplibregl.MapboxGeoJSONFeature[];
+        ) as MapGeoJSONFeature[];
 
         const bestPlace = pickBestPlaceFeature(features);
 
@@ -342,9 +363,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
       }
     };
 
-    const handleClick = (
-      event: maplibregl.MapMouseEvent & maplibregl.EventData
-    ) => {
+    const handleClick = (event: MapMouseEvent) => {
       const { lng, lat } = event.lngLat;
 
       const clickCb = clickCallbackRef.current;
@@ -376,7 +395,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
 
         const features = map.queryRenderedFeatures(
           queryBox
-        ) as maplibregl.MapboxGeoJSONFeature[];
+        ) as MapGeoJSONFeature[];
 
         const bestPlace = pickBestPlaceFeature(features);
         const meta = extractPlaceMetadata(bestPlace);
@@ -414,24 +433,26 @@ export const MapRoot: React.FC<MapRootProps> = ({
       const size = 1;
       const data = new Uint8Array(size * size * 4);
 
+      const image = {
+        width: size,
+        height: size,
+        data,
+        pixelRatio: 1,
+      };
+
       try {
-        map.addImage(id, { width: size, height: size, data, pixelRatio: 1 });
-      } catch (error) {
-        if (import.meta.env.DEV) {
-          console.warn(
-            "[MapRoot] Failed to add missing style image",
-            error
-          );
-        }
+        map.addImage(id, image);
+      } catch {
+        // noop – missing images are non-fatal
       }
     };
 
-    const handleError = (event: MapLibreErrorEvent) => {
+    const handleError = (event: { error?: Error }) => {
       if (!import.meta.env.DEV) {
         return;
       }
 
-      const err = event.error as Error | undefined;
+      const err = event.error;
       const msg = typeof err?.message === "string" ? err.message : "";
 
       // Ignore fetch abort noise when switching styles
@@ -478,22 +499,6 @@ export const MapRoot: React.FC<MapRootProps> = ({
 
     if (!map) {
       return;
-    }
-
-    // In globe mode, strip `around` from easeTo options to avoid noisy warnings
-    if (MAP_PROJECTION_TYPE === "globe") {
-      const globeMap = map as MapWithPatchedEase;
-      const originalEaseTo = globeMap.easeTo.bind(globeMap);
-
-      globeMap.easeTo = (options: EaseToOptionsLike) => {
-        if (options && typeof options === "object" && "around" in options) {
-          const safeOptions: EaseToOptionsLike = { ...options };
-          delete (safeOptions as { around?: unknown }).around;
-          originalEaseTo(safeOptions);
-          return;
-        }
-        originalEaseTo(options);
-      };
     }
 
     const nextStyleUrl =
@@ -548,12 +553,14 @@ export const MapRoot: React.FC<MapRootProps> = ({
     ];
 
     try {
-      map.easeTo({
+      const options: EaseToOptions = {
         center: nextCenter,
         zoom: Math.max(map.getZoom(), 12),
         duration: 900,
         essential: true,
-      } as EaseToOptionsLike);
+      };
+
+      map.easeTo(options);
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error("[MapRoot] Failed to focus location", error);
