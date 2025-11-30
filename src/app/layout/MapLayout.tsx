@@ -6,15 +6,26 @@ import { MapRoot } from "../../features/map/MapRoot";
 import type {
   MapViewport,
   MapSelectedLocation,
+  MapProjection,
 } from "../../features/map/MapRoot";
 import { useMapStore } from "../../state/mapStore";
 import { useUiStore } from "../../state/uiStore";
+import {
+  MAP_STYLE_URL_DARK,
+  MAP_STYLE_URL_SATELLITE,
+} from "../../config/map.config";
 
 export const MapLayout: React.FC = () => {
   const setViewport = useMapStore((state) => state.setViewport);
   const setSelectedLocation = useMapStore((state) => state.setSelectedLocation);
+  const clearSelectedLocation = useMapStore(
+    (state) => state.clearSelectedLocation
+  );
   const setMapReady = useMapStore((state) => state.setMapReady);
+
   const isSidePanelOpen = useUiStore((state) => state.isSidePanelOpen);
+  const openSidePanel = useUiStore((state) => state.openSidePanel);
+  const baseMapStyle = useUiStore((state) => state.baseMapStyle);
 
   const handleViewportChange = (nextViewport: MapViewport) => {
     setViewport(nextViewport);
@@ -22,15 +33,45 @@ export const MapLayout: React.FC = () => {
 
   const handleMapClick = (location: MapSelectedLocation) => {
     setSelectedLocation(location);
+
+    // Auto-open side panel when clicking the map if it is currently closed
+    if (!isSidePanelOpen) {
+      openSidePanel();
+    }
   };
+
+  const handleMapBackgroundClick = () => {
+    // Click outside the visible globe: clear selection, keep panel state as-is
+    clearSelectedLocation();
+  };
+
+
+  // Always use globe projection; only swap the basemap style
+  const mapStyleConfig: { styleUrl: string; projection: MapProjection } =
+    baseMapStyle === "dark"
+      ? {
+        styleUrl: MAP_STYLE_URL_DARK,
+        projection: "globe",
+      }
+      : {
+        styleUrl: MAP_STYLE_URL_SATELLITE,
+        projection: "globe",
+      };
 
   return (
     <div className="na-map-layout">
-      <div className="na-map-layout__map-area">
+      <div
+        className="na-map-layout__map-area"
+        data-side-panel-open={isSidePanelOpen ? "true" : "false"}
+      >
         <MapRoot
+          styleUrl={mapStyleConfig.styleUrl}
+          projection={mapStyleConfig.projection}
           onViewportChange={handleViewportChange}
           onMapClick={handleMapClick}
           onMapReady={setMapReady}
+          baseMapStyle={baseMapStyle}
+          onMapBackgroundClick={handleMapBackgroundClick}
         />
         <MapOverlays />
         <SidePanel isOpen={isSidePanelOpen} />

@@ -187,4 +187,86 @@ describe("SidePanel (location & weather view)", () => {
       await screen.findByText(/Network down/i)
     ).toBeInTheDocument();
   });
+
+  it("renders a fallback message when forecast data is empty but current weather is available", async () => {
+    useMapStore.setState((state) => ({
+      ...state,
+      selectedLocation: {
+        lat: baseLocation.lat,
+        lng: baseLocation.lon,
+        name: baseLocation.name,
+        countryCode: baseLocation.countryCode,
+      } as any,
+    }));
+
+    currentHookMock.mockReturnValue({
+      resource: {
+        status: "success",
+        data: fakeCurrentWeather,
+        error: undefined,
+      },
+    });
+
+    // Forecast succeeds but has no data (payload parcial)
+    forecastHookMock.mockReturnValue({
+      resource: {
+        status: "success",
+        data: [],
+        error: undefined,
+      },
+    });
+
+    render(<SidePanel isOpen={true} />);
+
+    // Seguimos viendo el bloque de forecast
+    expect(await screen.findByText("Forecast")).toBeInTheDocument();
+
+    // Mensaje de “sin datos de forecast” coherente con el componente
+    expect(
+      await screen.findByText(/No forecast data available for this location\./i)
+    ).toBeInTheDocument();
+  });
+
+  it("shows forecast error message while keeping current weather visible when forecast fails", async () => {
+    useMapStore.setState((state) => ({
+      ...state,
+      selectedLocation: {
+        lat: baseLocation.lat,
+        lng: baseLocation.lon,
+        name: baseLocation.name,
+        countryCode: baseLocation.countryCode,
+      } as any,
+    }));
+
+    currentHookMock.mockReturnValue({
+      resource: {
+        status: "success",
+        data: fakeCurrentWeather,
+        error: undefined,
+      },
+    });
+
+    const forecastError: WeatherError = {
+      kind: "network",
+      message: "Forecast API down",
+    };
+
+    forecastHookMock.mockReturnValue({
+      resource: {
+        status: "error",
+        data: [],
+        error: forecastError,
+      },
+    });
+
+    render(<SidePanel isOpen={true} />);
+
+    // Current weather sigue visible
+    expect(await screen.findByText("Few clouds")).toBeInTheDocument();
+
+    // Mensaje de error específico de forecast
+    expect(
+      await screen.findByText(/Forecast is temporarily unavailable\./i)
+    ).toBeInTheDocument();
+  });
 });

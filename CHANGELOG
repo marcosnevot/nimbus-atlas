@@ -9,6 +9,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - No unreleased changes yet.
 
+## [0.4.0] - 2025-11-30
+
+### Added
+
+#### Telemetry & Observability
+
+- Introduced `appTelemetry` as a central sink for app-level events, with a configurable interface and default dev-only console sink.
+- Extended `weatherTelemetry` with explicit event shapes for API request/success/error and degraded-data scenarios (hourly, daily, alerts).
+- Wired `weatherTelemetry` into the OpenWeather service and weather store so all weather flows emit structured events instead of ad-hoc logging.
+- Added dedicated tests for both `appTelemetry` and `weatherTelemetry`, including sink swapping and event dispatch behaviour.
+
+#### Map & UX
+
+- Added a space-themed background (vector starfield) behind the globe to make off-globe areas visually coherent instead of plain black.
+- Implemented a base map style toggle (“Map” / “Satellite”) that keeps globe projection always on and only swaps the underlying MapTiler style.
+- Added hover feedback for clickable places: the cursor now changes to a pointer only when the map can resolve a nearby city/town/locality.
+- Introduced a side panel handle anchored to the panel edge, with an animated chevron icon that reflects open/closed state.
+- Added a behaviour for clicks in “space” (outside the visible globe): the current selection is cleared and the Side Panel returns to its empty state.
+
+#### Weather & Side Panel
+
+- Refined the weather section in the Side Panel with clearer loading skeletons and messaging for current conditions and forecast.
+- Improved error messaging for current weather failures, surfacing domain-level `WeatherError` messages in a controlled, user-friendly way.
+
+#### Testing
+
+- Expanded `MapRoot` tests to cover:
+  - Viewport emission on load and `moveend`.
+  - Click behaviour including feature inspection, place metadata extraction and “space” clicks.
+- Updated Side Panel location tests to validate the new weather/error/forecast layout and selection lifecycle.
+- Strengthened OpenWeather and weather store tests around:
+  - Config errors when API key is missing.
+  - Network / HTTP / contract error paths.
+  - Bundle fan-out and error propagation.
+- Added tests for the new telemetry modules to ensure events are emitted to the active sink and that the default sink behaves as expected in dev.
+
+### Changed
+
+- Hardened OpenWeather configuration handling:
+  - API key retrieval now trims whitespace and fails fast with a clear config error when missing.
+  - Error mapping is stricter, normalising network, HTTP and contract failures into the domain’s `WeatherError` types.
+- Updated map initialisation to:
+  - Always apply globe projection after style load.
+  - Position built-in navigation controls in the top-left, leaving room for the Side Panel handle on the right edge.
+- Refined the base map toggle styling and interaction:
+  - Animated pill background that slides between “Map” and “Satellite”.
+  - Better alignment with the dark glassmorphism map overlay style.
+- Adjusted the Side Panel opening rules so:
+  - Clicking a location on the globe auto-abre el panel si estaba cerrado.
+  - Clearing selection from a “space” click also shows the empty state within the panel.
+
+### Removed
+
+- Deleted the obsolete `tests/fixtures/openWeatherAlertsFixture.ts` fixture; alert mapping is now exercised through more integrated service/store tests.
+
 ## [0.3.0] - 2025-11-29
 
 ### Added

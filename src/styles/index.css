@@ -107,22 +107,26 @@ a:hover {
   gap: var(--na-spacing-2);
 }
 
-/* Map layout */
+/* Map layout container */
 .na-map-layout {
   flex: 1;
   display: flex;
   min-height: 0;
 }
 
+/* Space background behind the globe */
 .na-map-layout__map-area {
-  position: relative;
   flex: 1;
   min-height: 0;
-  height: 100%;
-  border-radius: 0;
+  position: relative;
   overflow: hidden;
-  border: none;
-  background: 0;
+  --na-side-panel-width: 500px;
+
+  background-color: #02030a;
+  background-image: url("/space-bg.svg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* Side panel – container */
@@ -131,7 +135,7 @@ a:hover {
   top: var(--na-spacing-4);
   right: var(--na-spacing-4);
   bottom: var(--na-spacing-4);
-  width: 500px;
+  width: var(--na-side-panel-width);
   max-width: 100%;
   border-radius: var(--na-radius-lg);
   border: 1px solid rgba(148, 163, 184, 0.25);
@@ -324,7 +328,7 @@ a:hover {
   color: var(--na-color-text-muted);
 }
 
-/* Lista de elementos */
+/* Elements list */
 .na-side-panel__forecast-list {
   margin: 0;
   padding: 0;
@@ -396,7 +400,77 @@ a:hover {
   transform: none;
 }
 
+/* Side panel handle (map-side toggle) */
+.na-side-panel-handle {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
 
+  width: 45px;
+  height: 45px;
+  border-radius: 999px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  background-color: rgba(15, 23, 42, 0.96);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  pointer-events: auto;
+
+  font-size: 0;
+  line-height: 0;
+  color: transparent;
+
+  transition:
+    right var(--na-motion-standard) var(--na-motion-easing),
+    background-color var(--na-motion-fast) var(--na-motion-easing),
+    border-color var(--na-motion-fast) var(--na-motion-easing);
+}
+
+/* Posición según si el panel está abierto o cerrado */
+.na-map-layout__map-area[data-side-panel-open="true"] .na-side-panel-handle {
+  right: calc(var(--na-side-panel-width) + var(--na-spacing-4) - 0.6rem);
+}
+
+.na-map-layout__map-area[data-side-panel-open="false"] .na-side-panel-handle {
+  right: var(--na-spacing-4);
+}
+
+/* Contenedor del icono */
+.na-side-panel-handle__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SVG chevron centrado y animado */
+.na-side-panel-handle__icon-svg {
+  width: 30px;
+  /* encaja bien dentro de 50x50 */
+  height: 30px;
+  transform-origin: 50% 50%;
+  transform: rotate(0deg);
+  /* panel abierto: flecha hacia la derecha */
+  transition: transform var(--na-motion-standard) var(--na-motion-easing);
+}
+
+/* Trazo del chevron */
+.na-side-panel-handle__icon-shape {
+  stroke: rgba(148, 163, 184, 0.95);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+/* Panel cerrado: chevron mira hacia la izquierda */
+.na-side-panel-handle--closed .na-side-panel-handle__icon-svg {
+  transform: rotate(180deg);
+}
 
 /* TextField – hover/focus microinteraction */
 .na-text-field__input {
@@ -434,58 +508,6 @@ a:hover {
   box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.9);
 }
 
-/* City labels */
-.na-city-label {
-  /* Let MapLibre handle absolute positioning via .maplibregl-marker */
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  white-space: nowrap;
-  pointer-events: none;
-  color: var(--na-color-text);
-  font-weight: 600;
-  text-shadow: 0 0 8px rgba(0, 0, 0, 1);
-  opacity: 0;
-  animation: na-city-label-fade-in 160ms ease-out forwards;
-}
-
-.na-city-label__name {
-  line-height: 1.2;
-}
-
-/* Size tiers: larger cities = larger labels */
-.na-city-label--tier-xl {
-  font-size: 1.3rem;
-  letter-spacing: 0.02em;
-}
-
-.na-city-label--tier-lg {
-  font-size: 1.15rem;
-}
-
-.na-city-label--tier-md {
-  font-size: 1rem;
-}
-
-.na-city-label--tier-sm {
-  font-size: 0.95rem;
-}
-
-.na-city-label__temp {
-  font-size: 0.72em;
-  font-weight: 400;
-  opacity: 0.9;
-}
-
-@keyframes na-city-label-fade-in {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
 
 /* Ensure MapLibre markers are positioned over the map, not in normal flow */
 .maplibregl-marker {
@@ -501,16 +523,108 @@ a:hover {
   inset: var(--na-spacing-4);
   pointer-events: none;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
   align-items: flex-start;
   z-index: 10;
 }
 
 .na-map-overlays__stack {
+  pointer-events: auto;
+}
+
+.na-map-overlays__stack--bottom-left {
+  position: absolute;
+  left: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   gap: var(--na-spacing-2);
-  pointer-events: auto;
+}
+
+.na-map-basemap-toggle {
+  position: relative;
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  align-items: stretch;
+
+  padding: 2px;
+  border-radius: 999px;
+  background-color: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.65);
+  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(14px);
+  overflow: hidden;
+}
+
+/* “Thumb” animado de fondo */
+.na-map-basemap-toggle::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+
+  /* mitad del track, restando padding para que quede simétrico */
+  width: calc(50% - 2px);
+  border-radius: 999px;
+  background: linear-gradient(135deg,
+      rgba(56, 189, 248, 0.35),
+      rgba(59, 130, 246, 0.4));
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.9);
+
+  transform: translateX(0);
+  transition: transform var(--na-motion-standard) var(--na-motion-easing);
+}
+
+/* Thumb se mueve a la derecha cuando el estilo activo es satellite */
+.na-map-basemap-toggle[data-style="satellite"]::before {
+  transform: translateX(100%);
+}
+
+.na-map-basemap-toggle__button {
+  position: relative;
+  z-index: 1;
+
+  border: none;
+  background: transparent;
+  color: var(--na-color-text-muted);
+  font-size: 1.1rem;
+
+  /* el grid se encarga de que ambas mitades midan lo mismo;
+     padding solo vertical + un poco horizontal */
+  padding: 0.3rem 0.75rem 0.35rem;
+  border-radius: 999px;
+  cursor: pointer;
+  white-space: nowrap;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  transition:
+    color var(--na-motion-fast) var(--na-motion-easing),
+    opacity var(--na-motion-fast) var(--na-motion-easing);
+}
+
+/* Activo: texto claro encima del thumb */
+.na-map-basemap-toggle__button--active {
+  color: #e0f2fe;
+  opacity: 1;
+  font-weight: 500;
+}
+
+/* Inactivo: texto más apagado */
+.na-map-basemap-toggle__button:not(.na-map-basemap-toggle__button--active) {
+  opacity: 0.6;
+}
+
+/* Hover suave en el inactivo */
+.na-map-basemap-toggle__button:not(.na-map-basemap-toggle__button--active):hover {
+  opacity: 1;
+  color: var(--na-color-text);
 }
 
 /* UI primitives */
