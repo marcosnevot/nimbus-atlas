@@ -1,4 +1,5 @@
 // tests/mapStore.test.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, beforeEach } from "vitest";
 import { useMapStore } from "../src/state/mapStore";
 

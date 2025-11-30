@@ -1,4 +1,5 @@
 // tests/SidePanel.location.test.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import React from "react";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";

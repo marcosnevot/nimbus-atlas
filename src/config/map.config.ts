@@ -12,7 +12,6 @@ const FALLBACK_DEMO_STYLE_URL = "https://demotiles.maplibre.org/style.json";
 function buildMaptilerStyleUrl(mapId: string): string {
   if (!MAPTILER_API_KEY) {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.warn(
         "[map.config] Missing VITE_MAPTILER_API_KEY, falling back to demo style."
       );

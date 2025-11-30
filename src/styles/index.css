@@ -1,11 +1,11 @@
 /* src/styles/index.css */
 
-/* Design tokens (v0) */
+/* Design tokens */
 :root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color-scheme: dark;
 
+  /* Colors */
   --na-color-bg: #020617;
   --na-color-bg-elevated: #020617;
   --na-color-surface: #020617;
@@ -16,15 +16,20 @@
   --na-color-accent-soft: rgba(56, 189, 248, 0.12);
   --na-color-danger: #f97373;
 
+  /* Radius */
   --na-radius-sm: 0.375rem;
   --na-radius-md: 0.75rem;
   --na-radius-lg: 1rem;
+  --na-radius-pill: 999px;
 
+  /* Spacing */
+  --na-spacing-1: 0.25rem;
   --na-spacing-2: 0.5rem;
   --na-spacing-3: 0.75rem;
   --na-spacing-4: 1rem;
   --na-spacing-6: 1.5rem;
 
+  /* Motion */
   --na-motion-fast: 120ms;
   --na-motion-standard: 180ms;
   --na-motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -55,7 +60,7 @@ a:hover {
 
 /* App Shell */
 .na-app-shell {
-  min-height: 100%;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: var(--na-color-bg);
@@ -99,6 +104,19 @@ a:hover {
 .na-top-bar__search {
   flex: 1;
   max-width: 480px;
+  display: flex;
+  align-items: center;
+  gap: var(--na-spacing-2);
+}
+
+.na-top-bar__search form {
+  flex: 1;
+}
+
+.na-top-bar__search-error {
+  font-size: 0.75rem;
+  color: var(--na-color-danger);
+  white-space: nowrap;
 }
 
 .na-top-bar__actions {
@@ -139,8 +157,7 @@ a:hover {
   max-width: 100%;
   border-radius: var(--na-radius-lg);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  background:
-    #0206178f;
+  background: #0206178f;
   backdrop-filter: blur(18px);
   padding: var(--na-spacing-4);
   box-sizing: border-box;
@@ -202,7 +219,7 @@ a:hover {
   margin-top: var(--na-spacing-3);
   padding: var(--na-spacing-3);
   border-radius: var(--na-radius-lg);
-  background: rgba(15, 23, 42, 0.548);
+  background: #0206175e;
   border: 1px solid rgba(148, 163, 184, 0.25);
 }
 
@@ -347,8 +364,7 @@ a:hover {
   padding: 0.45rem 0.7rem;
   border-radius: var(--na-radius-md);
   border: 1px solid rgba(148, 163, 184, 0.25);
-  background:
-    rgba(15, 23, 42, 0.171);
+  background: rgba(15, 23, 42, 0.171);
   transition:
     background-color 140ms ease-out,
     transform 80ms ease-out,
@@ -408,7 +424,7 @@ a:hover {
 
   width: 45px;
   height: 45px;
-  border-radius: 999px;
+  border-radius: var(--na-radius-pill);
 
   display: flex;
   align-items: center;
@@ -450,7 +466,6 @@ a:hover {
 /* SVG chevron centrado y animado */
 .na-side-panel-handle__icon-svg {
   width: 30px;
-  /* encaja bien dentro de 50x50 */
   height: 30px;
   transform-origin: 50% 50%;
   transform: rotate(0deg);
@@ -472,42 +487,14 @@ a:hover {
   transform: rotate(180deg);
 }
 
-/* TextField – hover/focus microinteraction */
-.na-text-field__input {
-  width: 100%;
-  border-radius: var(--na-radius-md);
-  border: 1px solid var(--na-color-border-subtle);
-  background-color: rgba(15, 23, 42, 0.85);
-  color: var(--na-color-text);
-  padding: var(--na-spacing-2) var(--na-spacing-3);
-  font-size: 0.875rem;
-  box-sizing: border-box;
-  outline: none;
-  transition:
-    border-color 140ms ease-out,
-    box-shadow 140ms ease-out,
-    background-color 140ms ease-out;
-}
-
-.na-text-field__input:hover {
-  background-color: rgba(15, 23, 42, 0.95);
-}
-
-.na-text-field__input:focus-visible {
-  border-color: rgba(56, 189, 248, 0.8);
-  box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.6);
-  background-color: rgba(15, 23, 42, 0.98);
-}
-
 /* Map markers */
 .na-map-marker {
   width: 12px;
   height: 12px;
-  border-radius: 999px;
+  border-radius: var(--na-radius-pill);
   background-color: var(--na-color-accent);
   box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.9);
 }
-
 
 /* Ensure MapLibre markers are positioned over the map, not in normal flow */
 .maplibregl-marker {
@@ -550,7 +537,7 @@ a:hover {
   align-items: stretch;
 
   padding: 2px;
-  border-radius: 999px;
+  border-radius: var(--na-radius-pill);
   background-color: rgba(15, 23, 42, 0.9);
   border: 1px solid rgba(148, 163, 184, 0.65);
   box-shadow: 0 14px 32px rgba(15, 23, 42, 0.95);
@@ -568,10 +555,12 @@ a:hover {
 
   /* mitad del track, restando padding para que quede simétrico */
   width: calc(50% - 2px);
-  border-radius: 999px;
-  background: linear-gradient(135deg,
-      rgba(56, 189, 248, 0.35),
-      rgba(59, 130, 246, 0.4));
+  border-radius: var(--na-radius-pill);
+  background: linear-gradient(
+    135deg,
+    rgba(56, 189, 248, 0.35),
+    rgba(59, 130, 246, 0.4)
+  );
   box-shadow: 0 10px 26px rgba(15, 23, 42, 0.9);
 
   transform: translateX(0);
@@ -595,7 +584,7 @@ a:hover {
   /* el grid se encarga de que ambas mitades midan lo mismo;
      padding solo vertical + un poco horizontal */
   padding: 0.3rem 0.75rem 0.35rem;
-  border-radius: 999px;
+  border-radius: var(--na-radius-pill);
   cursor: pointer;
   white-space: nowrap;
 
@@ -710,11 +699,14 @@ a:hover {
   color: #ffffff;
 }
 
+/* Shared focus-visible for buttons */
+.na-button:focus-visible,
 .na-icon-button:focus-visible {
   outline: 2px solid var(--na-color-accent);
   outline-offset: 3px;
 }
 
+/* Disabled state */
 .na-icon-button:disabled {
   opacity: 0.5;
   cursor: default;
@@ -741,10 +733,15 @@ a:hover {
   color: var(--na-color-text-muted);
 }
 
+.na-text-field__input:hover {
+  background-color: rgba(15, 23, 42, 0.95);
+}
+
 .na-text-field__input:focus-visible {
   outline: none;
   border-color: var(--na-color-accent);
-  box-shadow: 0 0 0 1px var(--na-color-accent),
+  box-shadow:
+    0 0 0 1px var(--na-color-accent),
     0 12px 30px rgba(15, 23, 42, 0.9);
   background-color: #020617;
 }
@@ -754,10 +751,12 @@ a:hover {
   position: relative;
   overflow: hidden;
   border-radius: var(--na-radius-sm);
-  background: linear-gradient(90deg,
-      #020617 0%,
-      #0b1120 50%,
-      #020617 100%);
+  background: linear-gradient(
+    90deg,
+    #020617 0%,
+    #0b1120 50%,
+    #020617 100%
+  );
   background-size: 200% 100%;
   animation: na-skeleton-shimmer 1200ms ease-in-out infinite;
 }
@@ -765,7 +764,7 @@ a:hover {
 .na-skeleton--temperature {
   width: 4.5rem;
   height: 2.3rem;
-  border-radius: 999px;
+  border-radius: var(--na-radius-pill);
   margin-bottom: 0.25rem;
 }
 
@@ -799,6 +798,15 @@ a:hover {
   .na-skeleton {
     animation: none;
     background-position: 0 0;
+  }
+
+  .na-button,
+  .na-icon-button,
+  .na-text-field__input,
+  .na-side-panel {
+    transition: none;
+    transform: none;
+    box-shadow: none;
   }
 }
 
@@ -845,19 +853,6 @@ a:hover {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-/* Motion preferences */
-@media (prefers-reduced-motion: reduce) {
-
-  .na-button,
-  .na-icon-button,
-  .na-text-field__input,
-  .na-side-panel {
-    transition: none;
-    transform: none;
-    box-shadow: none;
-  }
 }
 
 /* Responsive tweaks */

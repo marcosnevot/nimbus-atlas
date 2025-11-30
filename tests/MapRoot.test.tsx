@@ -1,4 +1,5 @@
 // tests/MapRoot.test.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import React from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
@@ -9,72 +10,134 @@ vi.mock("maplibre-gl", () => {
   type Handler = (...args: any[]) => void;
   type HandlersMap = Record<string, Handler[]>;
 
-  const state: {
-    lastMapInstance: FakeMap | null;
-    mockFeatures: any[];
-  } = {
+  const state: { lastMapInstance: any; mockFeatures: any[] } = {
     lastMapInstance: null,
     mockFeatures: [],
   };
 
-  // src/app/layout/MapLayout.tsx
-  import React from "react";
-  import { MapOverlays } from "./MapOverlays";
-  import { SidePanel } from "./SidePanel";
-  import { MapRoot } from "../../features/map/MapRoot";
-  import type {
-    MapViewport,
-    MapSelectedLocation,
-  } from "../../features/map/MapRoot";
-  import { useMapStore } from "../../state/mapStore";
-  import { useUiStore } from "../../state/uiStore";
-
-  export const MapLayout: React.FC = () => {
-    const setViewport = useMapStore((state) => state.setViewport);
-    const setSelectedLocation = useMapStore((state) => state.setSelectedLocation);
-    const clearSelectedLocation = useMapStore(
-      (state) => state.clearSelectedLocation
-    );
-    const setMapReady = useMapStore((state) => state.setMapReady);
-
-    const isSidePanelOpen = useUiStore((state) => state.isSidePanelOpen);
-    const openSidePanel = useUiStore((state) => state.openSidePanel);
-
-    const handleViewportChange = (nextViewport: MapViewport) => {
-      setViewport(nextViewport);
+  class FakeMap {
+    private handlers: HandlersMap = {};
+    private canvas: {
+      style: Record<string, string>;
+      clientWidth: number;
+      clientHeight: number;
     };
+    private center = { lng: 0, lat: 0 };
+    private zoom = 5;
+    private bearing = 0;
+    private pitch = 0;
+    private bounds = { west: -10, south: -10, east: 10, north: 10 };
 
-    const handleMapClick = (location: MapSelectedLocation) => {
-      setSelectedLocation(location);
-      // Any explicit selection should open the side panel
-      openSidePanel();
-    };
+    constructor(options?: { center?: [number, number]; zoom?: number }) {
+      this.canvas = {
+        style: { cursor: "" },
+        clientWidth: 400,
+        clientHeight: 400,
+      };
 
-    const handleMapBackgroundClick = () => {
-      // Click in "space": clear selection and show the empty state
-      clearSelectedLocation();
-      openSidePanel();
-    };
+      if (options?.center) {
+        this.center = { lng: options.center[0], lat: options.center[1] };
+      }
+      if (typeof options?.zoom === "number") {
+        this.zoom = options.zoom;
+      }
 
-    return (
-      <div className="na-map-layout">
-        <div className="na-map-layout__map-area">
-          <MapRoot
-            onViewportChange={handleViewportChange}
-            onMapClick={handleMapClick}
-            onMapBackgroundClick={handleMapBackgroundClick}
-            onMapReady={setMapReady}
-          />
-          <MapOverlays />
-          <SidePanel isOpen={isSidePanelOpen} />
-        </div>
-      </div>
-    );
-  };
+      state.lastMapInstance = this;
+    }
 
+    on(eventName: string, handler: Handler) {
+      if (!this.handlers[eventName]) {
+        this.handlers[eventName] = [];
+      }
+      this.handlers[eventName].push(handler);
+
+      // Simulate immediate "load" so MapRoot calls onMapReady y emite viewport
+      if (eventName === "load") {
+        handler({} as any);
+      }
+    }
+
+    off(eventName: string, handler: Handler) {
+      const list = this.handlers[eventName];
+      if (!list) return;
+      this.handlers[eventName] = list.filter((h) => h !== handler);
+    }
+
+    trigger(eventName: string, payload: any) {
+      const list = this.handlers[eventName];
+      if (!list) return;
+      list.forEach((handler) => handler(payload));
+    }
+
+    getCenter() {
+      return this.center;
+    }
+
+    getZoom() {
+      return this.zoom;
+    }
+
+    getBearing() {
+      return this.bearing;
+    }
+
+    getPitch() {
+      return this.pitch;
+    }
+
+    getBounds() {
+      const { west, south, east, north } = this.bounds;
+      return {
+        getWest: () => west,
+        getSouth: () => south,
+        getEast: () => east,
+        getNorth: () => north,
+      };
+    }
+
+    getCanvas() {
+      return this.canvas as any;
+    }
+
+    queryRenderedFeatures() {
+      return state.mockFeatures;
+    }
+
+    setStyle(_style: string, _options?: any) {
+      // no-op for tests
+    }
+
+    addControl(_control: any, _position?: string) {
+      // no-op
+    }
+
+    hasImage(_id: string) {
+      return false;
+    }
+
+    addImage(_id: string, _img: any) {
+      // no-op
+    }
+
+    setProjection(_config: any) {
+      // no-op
+    }
+
+    easeTo(options: any) {
+      if (options?.center && Array.isArray(options.center)) {
+        this.center = { lng: options.center[0], lat: options.center[1] };
+      }
+      if (typeof options?.zoom === "number") {
+        this.zoom = options.zoom;
+      }
+    }
+
+    remove() {
+      // no-op
+    }
+  }
 
   class FakeNavigationControl {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     constructor(_options?: any) { }
   }
 
@@ -96,6 +159,7 @@ vi.mock("maplibre-gl", () => {
     default: defaultExport,
     Map: FakeMap,
     NavigationControl: FakeNavigationControl,
+    __test: helpers,
   };
 });
 
@@ -128,8 +192,8 @@ describe("MapRoot", () => {
     const viewport = handleViewportChange.mock.calls[0][0];
 
     expect(viewport).toMatchObject({
-      center: { lng: 0, lat: 0 },
-      zoom: 5,
+      center: { lng: -3.7038, lat: 40.4168 },
+      zoom: 4,
       bearing: 0,
       pitch: 0,
       bounds: {
@@ -247,7 +311,7 @@ describe("MapRoot", () => {
     const handleClick = vi.fn();
     const helpers = (maplibregl as any).__test;
 
-    // Primero simulamos que hay una ciudad
+    // First simulate a place feature
     helpers.setMockFeatures([
       {
         properties: {
@@ -264,13 +328,13 @@ describe("MapRoot", () => {
     const map = helpers.getLastInstance();
     const canvas = map.getCanvas();
 
-    // Hover sobre ciudad → pointer
+    // Hover over city → pointer
     map.trigger("mousemove", {
       point: { x: 100, y: 100 },
     });
     expect(canvas.style.cursor).toBe("pointer");
 
-    // Ahora no hay features de lugar cerca
+    // Now no place features near the cursor
     helpers.setMockFeatures([]);
 
     map.trigger("mousemove", {

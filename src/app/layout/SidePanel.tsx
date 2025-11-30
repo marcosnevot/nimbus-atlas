@@ -106,12 +106,14 @@ export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
   return (
     <aside
       className="na-side-panel"
+      id="side-panel"
       aria-label="Location details"
+      aria-labelledby="side-panel-title"
       data-open={isOpen ? "true" : "false"}
       data-has-selection={hasSelection ? "true" : "false"}
       aria-busy={isBusy}
     >
-      <h2 className="na-side-panel__title">Location details</h2>
+      <h2 id="side-panel-title" className="na-side-panel__title">Location details</h2>
 
       {!selectedLocation && (
         <p className="na-side-panel__placeholder">

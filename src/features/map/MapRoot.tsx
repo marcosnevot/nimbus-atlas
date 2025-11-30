@@ -1,7 +1,7 @@
 // src/features/map/MapRoot.tsx
 import React, { useEffect, useRef } from "react";
 import maplibregl from "maplibre-gl";
-import type { Map as MapLibreMap } from "maplibre-gl";
+import type { Map as MapLibreMap, ErrorEvent as MapLibreErrorEvent } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 
 import {
@@ -11,7 +11,6 @@ import {
   DEFAULT_MAP_ZOOM,
   MAP_PROJECTION_TYPE,
 } from "../../config/map.config";
-
 
 export type MapCoordinates = {
   lng: number;
@@ -53,6 +52,34 @@ export type MapRootProps = {
   /** Base map style controlled from UI store ("Map" / "Satellite"). */
   baseMapStyle?: "dark" | "satellite";
   className?: string;
+  focusLocation?: MapCoordinates | null;
+};
+
+type MapCanvas = HTMLCanvasElement & {
+  clientWidth: number;
+  clientHeight: number;
+};
+
+type PlaceProperties = {
+  class?: unknown;
+  population?: unknown;
+  pop?: unknown;
+  "name:es"?: unknown;
+  "name:en"?: unknown;
+  name?: unknown;
+  iso_3166_1?: unknown;
+  "iso_3166_1:alpha2"?: unknown;
+  country_code?: unknown;
+  iso_a2?: unknown;
+  [key: string]: unknown;
+};
+
+type EaseToOptionsLike = {
+  [key: string]: unknown;
+};
+
+type MapWithPatchedEase = MapLibreMap & {
+  easeTo(options: EaseToOptionsLike): void;
 };
 
 function isClickOutsideGlobe(
@@ -64,13 +91,10 @@ function isClickOutsideGlobe(
     return false;
   }
 
-  const canvas = map.getCanvas() as HTMLCanvasElement | {
-    clientWidth: number;
-    clientHeight: number;
-  };
+  const canvas = map.getCanvas() as MapCanvas;
 
-  const width = (canvas as any).clientWidth ?? 0;
-  const height = (canvas as any).clientHeight ?? 0;
+  const width = canvas.clientWidth ?? 0;
+  const height = canvas.clientHeight ?? 0;
 
   if (!width || !height) {
     return false;
@@ -98,6 +122,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
   onMapReady,
   baseMapStyle = "dark",
   className,
+  focusLocation,
 }) => {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
@@ -154,7 +179,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
     features: maplibregl.MapboxGeoJSONFeature[]
   ): maplibregl.MapboxGeoJSONFeature | undefined {
     const placeFeatures = features.filter((feature) => {
-      const props = feature.properties as Record<string, unknown> | undefined;
+      const props = feature.properties as PlaceProperties | undefined;
       if (!props) return false;
 
       const name =
@@ -197,11 +222,11 @@ export const MapRoot: React.FC<MapRootProps> = ({
     };
 
     placeFeatures.sort((a, b) => {
-      const propsA = a.properties as any;
-      const propsB = b.properties as any;
+      const propsA = (a.properties ?? {}) as PlaceProperties;
+      const propsB = (b.properties ?? {}) as PlaceProperties;
 
-      const classA = String(propsA?.class ?? "");
-      const classB = String(propsB?.class ?? "");
+      const classA = String(propsA.class ?? "");
+      const classB = String(propsB.class ?? "");
       const rankA = classPriority[classA] ?? -1;
       const rankB = classPriority[classB] ?? -1;
 
@@ -210,12 +235,12 @@ export const MapRoot: React.FC<MapRootProps> = ({
       }
 
       const popA =
-        (propsA?.population as number | undefined) ??
-        (propsA?.pop as number | undefined) ??
+        (propsA.population as number | undefined) ??
+        (propsA.pop as number | undefined) ??
         0;
       const popB =
-        (propsB?.population as number | undefined) ??
-        (propsB?.pop as number | undefined) ??
+        (propsB.population as number | undefined) ??
+        (propsB.pop as number | undefined) ??
         0;
 
       return popB - popA;
@@ -231,7 +256,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
       return {};
     }
 
-    const props = feature.properties as Record<string, unknown>;
+    const props = feature.properties as PlaceProperties;
 
     const name =
       (props["name:es"] as string | undefined) ??
@@ -251,26 +276,25 @@ export const MapRoot: React.FC<MapRootProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    const initialStyleUrl =
-      baseMapStyle === "satellite"
-        ? MAP_STYLE_URL_SATELLITE
-        : MAP_STYLE_URL_DARK;
-
+    // Initial style is always dark; baseMapStyle toggling is handled
+    // by the dedicated effect below.
     const map = new maplibregl.Map({
       container: mapContainerRef.current,
-      style: initialStyleUrl,
+      style: MAP_STYLE_URL_DARK,
       center: [initialCenter.lng, initialCenter.lat],
       zoom: initialZoom,
       attributionControl: true,
     });
 
-
     mapRef.current = map;
 
     const handleStyleLoad = () => {
       // Important: set projection after style is loaded
-      if (MAP_PROJECTION_TYPE === "globe" && (map as any).setProjection) {
-        (map as any).setProjection({ type: "globe" } as any);
+      if (MAP_PROJECTION_TYPE === "globe") {
+        const globeMap = map as MapLibreMap & {
+          setProjection?: (options: { type: "globe" }) => void;
+        };
+        globeMap.setProjection?.({ type: "globe" });
       }
     };
 
@@ -293,7 +317,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
       const hasClickHandler = Boolean(clickCallbackRef.current);
 
       if (!hasClickHandler) {
-        (canvas as HTMLCanvasElement).style.cursor = "";
+        canvas.style.cursor = "";
         return;
       }
 
@@ -312,9 +336,9 @@ export const MapRoot: React.FC<MapRootProps> = ({
 
         const bestPlace = pickBestPlaceFeature(features);
 
-        (canvas as HTMLCanvasElement).style.cursor = bestPlace ? "pointer" : "";
+        canvas.style.cursor = bestPlace ? "pointer" : "";
       } catch {
-        (canvas as HTMLCanvasElement).style.cursor = "";
+        canvas.style.cursor = "";
       }
     };
 
@@ -361,11 +385,12 @@ export const MapRoot: React.FC<MapRootProps> = ({
         countryCode = meta.countryCode;
       } catch (error) {
         // Fallback: coordinates only
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[MapRoot] Failed to extract place metadata from click",
-          error
-        );
+        if (import.meta.env.DEV) {
+          console.warn(
+            "[MapRoot] Failed to extract place metadata from click",
+            error
+          );
+        }
       }
 
       clickCb({
@@ -391,8 +416,30 @@ export const MapRoot: React.FC<MapRootProps> = ({
 
       try {
         map.addImage(id, { width: size, height: size, data, pixelRatio: 1 });
-      } catch {
+      } catch (error) {
+        if (import.meta.env.DEV) {
+          console.warn(
+            "[MapRoot] Failed to add missing style image",
+            error
+          );
+        }
       }
+    };
+
+    const handleError = (event: MapLibreErrorEvent) => {
+      if (!import.meta.env.DEV) {
+        return;
+      }
+
+      const err = event.error as Error | undefined;
+      const msg = typeof err?.message === "string" ? err.message : "";
+
+      // Ignore fetch abort noise when switching styles
+      if (msg.includes("signal is aborted without reason")) {
+        return;
+      }
+
+      console.error("[MapRoot] Map error", event);
     };
 
     map.on("style.load", handleStyleLoad);
@@ -401,22 +448,7 @@ export const MapRoot: React.FC<MapRootProps> = ({
     map.on("mousemove", handleMouseMove);
     map.on("click", handleClick);
     map.on("styleimagemissing", handleStyleImageMissing);
-    map.on("error", (event) => {
-      if (!import.meta.env.DEV) {
-        return;
-      }
-
-      const err = (event as any).error;
-      const msg = typeof err?.message === "string" ? err.message : "";
-
-      // Ignore fetch abort noise when switching styles
-      if (msg.includes("signal is aborted without reason")) {
-        return;
-      }
-
-      // eslint-disable-next-line no-console
-      console.error("[MapRoot] Map error", event);
-    });
+    map.on("error", handleError);
 
     const navigationControl = new maplibregl.NavigationControl({
       visualizePitch: true,
@@ -429,6 +461,8 @@ export const MapRoot: React.FC<MapRootProps> = ({
       map.off("moveend", handleMoveEnd);
       map.off("mousemove", handleMouseMove);
       map.off("click", handleClick);
+      map.off("styleimagemissing", handleStyleImageMissing);
+      map.off("error", handleError);
 
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
@@ -442,22 +476,25 @@ export const MapRoot: React.FC<MapRootProps> = ({
   useEffect(() => {
     const map = mapRef.current;
 
-    // In globe mode, strip `around` from easeTo options to avoid noisy warnings
-    if (MAP_PROJECTION_TYPE === "globe") {
-      const anyMap = map as any;
-      if (typeof anyMap.easeTo === "function") {
-        const originalEaseTo = anyMap.easeTo.bind(anyMap);
-        anyMap.easeTo = (options: any, ...rest: any[]) => {
-          if (options && typeof options === "object" && "around" in options) {
-            const { around, ...safe } = options;
-            return originalEaseTo(safe, ...rest);
-          }
-          return originalEaseTo(options, ...rest);
-        };
-      }
+    if (!map) {
+      return;
     }
 
-    if (!map) return;
+    // In globe mode, strip `around` from easeTo options to avoid noisy warnings
+    if (MAP_PROJECTION_TYPE === "globe") {
+      const globeMap = map as MapWithPatchedEase;
+      const originalEaseTo = globeMap.easeTo.bind(globeMap);
+
+      globeMap.easeTo = (options: EaseToOptionsLike) => {
+        if (options && typeof options === "object" && "around" in options) {
+          const safeOptions: EaseToOptionsLike = { ...options };
+          delete (safeOptions as { around?: unknown }).around;
+          originalEaseTo(safeOptions);
+          return;
+        }
+        originalEaseTo(options);
+      };
+    }
 
     const nextStyleUrl =
       baseMapStyle === "satellite"
@@ -469,7 +506,6 @@ export const MapRoot: React.FC<MapRootProps> = ({
       map.setStyle(nextStyleUrl, { diff: false });
     } catch (error) {
       if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
         console.error("[MapRoot] Failed to switch base map style", error);
       }
     }
@@ -498,6 +534,32 @@ export const MapRoot: React.FC<MapRootProps> = ({
       markersRef.current.push(marker);
     });
   }, [markers]);
+
+  // Focus map when an external focusLocation is provided (e.g. search result)
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !focusLocation) {
+      return;
+    }
+
+    const nextCenter: [number, number] = [
+      focusLocation.lng,
+      focusLocation.lat,
+    ];
+
+    try {
+      map.easeTo({
+        center: nextCenter,
+        zoom: Math.max(map.getZoom(), 12),
+        duration: 900,
+        essential: true,
+      } as EaseToOptionsLike);
+    } catch (error) {
+      if (import.meta.env.DEV) {
+        console.error("[MapRoot] Failed to focus location", error);
+      }
+    }
+  }, [focusLocation]);
 
   const classes = ["na-map-root", className].filter(Boolean).join(" ");
 

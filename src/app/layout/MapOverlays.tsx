@@ -1,6 +1,5 @@
 // src/app/layout/MapOverlays.tsx
 import React from "react";
-import { IconButton } from "../../ui/IconButton";
 import { useUiStore } from "../../state/uiStore";
 
 export const MapOverlays: React.FC = () => {
@@ -26,6 +25,9 @@ export const MapOverlays: React.FC = () => {
         }
         onClick={toggleSidePanel}
         aria-label={sidePanelAriaLabel}
+        aria-expanded={isSidePanelOpen}
+        aria-pressed={isSidePanelOpen}
+        aria-controls="side-panel"
       >
         <span className="na-side-panel-handle__icon" aria-hidden="true">
           <svg
@@ -45,9 +47,9 @@ export const MapOverlays: React.FC = () => {
       <div className="na-map-overlays__stack na-map-overlays__stack--bottom-left">
         <div
           className="na-map-basemap-toggle"
-          role="radiogroup"
+          role="group"
           aria-label="Base map style"
-          data-style={baseMapStyle} 
+          data-style={baseMapStyle}
         >
           <button
             type="button"
@@ -58,6 +60,7 @@ export const MapOverlays: React.FC = () => {
                 : "")
             }
             onClick={() => setBaseMapStyle("dark")}
+            aria-pressed={baseMapStyle === "dark"}
           >
             Map
           </button>
@@ -70,6 +73,7 @@ export const MapOverlays: React.FC = () => {
                 : "")
             }
             onClick={() => setBaseMapStyle("satellite")}
+            aria-pressed={baseMapStyle === "satellite"}
           >
             Satellite
           </button>

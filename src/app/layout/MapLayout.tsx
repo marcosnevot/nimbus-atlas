@@ -27,6 +27,8 @@ export const MapLayout: React.FC = () => {
   const openSidePanel = useUiStore((state) => state.openSidePanel);
   const baseMapStyle = useUiStore((state) => state.baseMapStyle);
 
+  const searchTarget = useMapStore((state) => state.searchTarget);
+
   const handleViewportChange = (nextViewport: MapViewport) => {
     setViewport(nextViewport);
   };
@@ -72,6 +74,7 @@ export const MapLayout: React.FC = () => {
           onMapReady={setMapReady}
           baseMapStyle={baseMapStyle}
           onMapBackgroundClick={handleMapBackgroundClick}
+          focusLocation={searchTarget ?? undefined}
         />
         <MapOverlays />
         <SidePanel isOpen={isSidePanelOpen} />
