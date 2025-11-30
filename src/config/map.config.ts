@@ -1,6 +1,6 @@
 // src/config/map.config.ts
 
-const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY ?? "";
+const MAPTILER_API_KEY = (import.meta.env.VITE_MAPTILER_API_KEY ?? "").trim();
 
 const FALLBACK_DEMO_STYLE_URL = "https://demotiles.maplibre.org/style.json";
 

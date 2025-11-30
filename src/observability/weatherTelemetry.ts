@@ -46,6 +46,58 @@ export interface WeatherTelemetrySink {
 const envMode = import.meta.env.MODE ?? "development";
 const isDev = envMode !== "production";
 
+/**
+ * Coarsen/sanitize a LocationRef before it is sent to telemetry sinks.
+ *
+ * - Rounds lat/lon to a lower precision to avoid storing precise coordinates.
+ * - Keeps only fields that are useful for high-level diagnostics.
+ * - Drops identifiers/timezone and any extra fields that could be added later.
+ */
+function sanitizeLocationForTelemetry(
+  location: LocationRef | undefined
+): LocationRef | undefined {
+  if (!location) {
+    return undefined;
+  }
+
+  const safeLat =
+    typeof location.lat === "number"
+      ? Number(location.lat.toFixed(2))
+      : location.lat;
+
+  const safeLon =
+    typeof location.lon === "number"
+      ? Number(location.lon.toFixed(2))
+      : location.lon;
+
+  return {
+    lat: safeLat,
+    lon: safeLon,
+    name: location.name,
+    countryCode: location.countryCode,
+    // Intentionally omitting id, timezone and any other extra fields.
+  };
+}
+
+/**
+ * Returns a shallow copy of the event with a sanitized location.
+ * The original event object is left untouched.
+ */
+function withSanitizedLocation<T extends { location?: LocationRef }>(
+  event: T
+): T {
+  if (!event.location) {
+    return event;
+  }
+
+  const sanitizedLocation = sanitizeLocationForTelemetry(event.location);
+
+  return {
+    ...event,
+    location: sanitizedLocation,
+  };
+}
+
 const defaultSink: WeatherTelemetrySink = {
   onApiRequest(event) {
     if (!isDev) return;
@@ -84,19 +136,22 @@ function getSink(): WeatherTelemetrySink {
 export function trackWeatherApiRequest(
   event: WeatherApiRequestEvent
 ): void {
-  getSink().onApiRequest?.(event);
+  const safeEvent = withSanitizedLocation(event);
+  getSink().onApiRequest?.(safeEvent);
 }
 
 export function trackWeatherApiSuccess(
   event: WeatherApiSuccessEvent
 ): void {
-  getSink().onApiSuccess?.(event);
+  const safeEvent = withSanitizedLocation(event);
+  getSink().onApiSuccess?.(safeEvent);
 }
 
 export function trackWeatherApiError(
   event: WeatherApiErrorEvent
 ): void {
-  getSink().onApiError?.(event);
+  const safeEvent = withSanitizedLocation(event);
+  getSink().onApiError?.(safeEvent);
 }
 
 export function trackWeatherDataDegraded(

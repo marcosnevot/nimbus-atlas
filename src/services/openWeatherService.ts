@@ -169,6 +169,26 @@ interface OpenWeather2_5ForecastResponse {
 
 // ---------- Low-level fetchers (2.5 endpoints) ----------
 
+function classifyHttpErrorKind(status: number): WeatherError["kind"] {
+  if (status === 429) {
+    return "rate_limit";
+  }
+
+  if (status === 401 || status === 403) {
+    return "config";
+  }
+
+  if (status >= 400 && status < 500) {
+    return "http";
+  }
+
+  if (status >= 500) {
+    return "http";
+  }
+
+  return "unknown";
+}
+
 async function fetchCurrent2_5(
   location: LocationRef,
   apiKey: string
@@ -193,9 +213,14 @@ async function fetchCurrent2_5(
       ? Number(retryAfterHeader) * 1000
       : undefined;
 
+    const kind = classifyHttpErrorKind(response.status);
+
     const error: WeatherError = {
-      kind: response.status === 429 ? "rate_limit" : "http",
-      message: `OpenWeather HTTP error (current 2.5): ${response.status}`,
+      kind,
+      message:
+        kind === "config"
+          ? `OpenWeather configuration or API key error (current 2.5): ${response.status}`
+          : `OpenWeather HTTP error (current 2.5): ${response.status}`,
       statusCode: response.status,
       retryAfterMs,
     };
@@ -239,9 +264,14 @@ async function fetchForecast2_5(
       ? Number(retryAfterHeader) * 1000
       : undefined;
 
+    const kind = classifyHttpErrorKind(response.status);
+
     const error: WeatherError = {
-      kind: response.status === 429 ? "rate_limit" : "http",
-      message: `OpenWeather HTTP error (forecast 2.5): ${response.status}`,
+      kind,
+      message:
+        kind === "config"
+          ? `OpenWeather configuration or API key error (forecast 2.5): ${response.status}`
+          : `OpenWeather HTTP error (forecast 2.5): ${response.status}`,
       statusCode: response.status,
       retryAfterMs,
     };

@@ -4,6 +4,7 @@ import { useMapStore } from "../../state/mapStore";
 import { useSelectedLocationCurrentWeather } from "../../hooks/useSelectedLocationCurrentWeather";
 import { useSelectedLocationForecast } from "../../hooks/useSelectedLocationForecast";
 import { Skeleton } from "../../ui/Skeleton";
+import type { WeatherError } from "../../entities/weather/models";
 
 const formatCoord = (value: number) => value.toFixed(4);
 
@@ -31,6 +32,39 @@ const formatDateShort = (iso: string) => {
   }
 };
 
+function buildCurrentWeatherErrorMessage(error?: WeatherError): string {
+  const base = "Unable to load current weather";
+
+  if (!error) {
+    return `${base}.`;
+  }
+
+  switch (error.kind) {
+    case "network":
+      // Preserves original message so tests that look for "Network down" still pass
+      return error.message
+        ? `${base}: ${error.message}`
+        : `${base}: network error.`;
+    case "rate_limit": {
+      const suffix =
+        typeof error.retryAfterMs === "number" && error.retryAfterMs > 0
+          ? " Please try again in a few seconds."
+          : " Please try again shortly.";
+      return `${base}: too many requests to the weather provider.${suffix}`;
+    }
+    case "config":
+      return `${base}: weather provider is not fully configured in this demo.`;
+    case "contract":
+      return `${base}: the weather data from the provider had an unexpected format.`;
+    case "http":
+      return error.statusCode
+        ? `${base}: the weather provider returned an unexpected response (${error.statusCode}).`
+        : `${base}: the weather provider returned an unexpected response.`;
+    default:
+      return error.message ? `${base}: ${error.message}` : `${base}.`;
+  }
+}
+
 type SidePanelProps = {
   isOpen: boolean;
 };
@@ -48,6 +82,7 @@ export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
 
   const forecastStatus = forecastResource?.status ?? "idle";
   const timelines = forecastResource?.data ?? [];
+  const forecastError = forecastResource?.error;
 
   const hourlyTimeline = timelines.find((t) => t.granularity === "3h");
   const dailyTimeline = timelines.find((t) => t.granularity === "daily");
@@ -128,9 +163,8 @@ export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
             )}
 
             {weatherStatus === "error" && (
-              <p className="na-side-panel__error">
-                Unable to load current weather
-                {weatherError?.message ? `: ${weatherError.message}` : "."}
+              <p className="na-side-panel__error" aria-live="polite">
+                {buildCurrentWeatherErrorMessage(weatherError)}
               </p>
             )}
 
@@ -202,8 +236,12 @@ export const SidePanel: React.FC<SidePanelProps> = ({ isOpen }) => {
               )}
 
             {forecastStatus === "error" && (
-              <p className="na-side-panel__error">
+              <p className="na-side-panel__error" aria-live="polite">
                 Forecast is temporarily unavailable.
+                {forecastError?.kind === "network" &&
+                  " Please check your connection and try again."}
+                {forecastError?.kind === "rate_limit" &&
+                  " The weather provider is temporarily limiting requests. Please try again shortly."}
               </p>
             )}
 

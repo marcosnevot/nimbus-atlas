@@ -97,6 +97,19 @@ describe("weatherStore ensure* methods", () => {
     fetchWeatherBundleMock.mockReset();
   });
 
+  it("buildLocationKey rounds coordinates and appends id when provided", () => {
+    const location: LocationRef = {
+      lat: 40.416789,
+      lon: -3.703845,
+      name: "Madrid",
+      id: "loc-1",
+    };
+
+    const key = buildLocationKey(location);
+
+    expect(key).toBe("loc:40.417,-3.704:loc-1");
+  });
+
   it("stores bundle data on ensureCurrentWeather", async () => {
     fetchWeatherBundleMock.mockResolvedValue(fakeBundle);
 
@@ -134,6 +147,20 @@ describe("weatherStore ensure* methods", () => {
     expect(fetchWeatherBundleMock).toHaveBeenCalledTimes(1);
   });
 
+  it("deduplicates concurrent ensure* calls for the same location", async () => {
+    fetchWeatherBundleMock.mockResolvedValue(fakeBundle);
+
+    const location: LocationRef = { ...baseLocation };
+
+    await Promise.all([
+      useWeatherStore.getState().ensureCurrentWeather(location),
+      useWeatherStore.getState().ensureForecast(location),
+      useWeatherStore.getState().ensureAlerts(location),
+    ]);
+
+    expect(fetchWeatherBundleMock).toHaveBeenCalledTimes(1);
+  });
+
   it("propagates error to all resources when bundle fetch fails", async () => {
     const error: WeatherError = {
       kind: "network",
@@ -160,5 +187,162 @@ describe("weatherStore ensure* methods", () => {
 
     expect(alertsRes?.status).toBe("error");
     expect(alertsRes?.error).toEqual(error);
+  });
+
+  it("does not fetch when existing current resource is fresh and successful", async () => {
+    const location: LocationRef = { ...baseLocation };
+    const key = buildLocationKey(location);
+    const now = Date.now();
+
+    useWeatherStore.setState((state) => ({
+      ...state,
+      currentByLocationKey: {
+        [key]: {
+          status: "success",
+          data: fakeCurrentWeather,
+          lastUpdatedAt: now,
+        },
+      },
+    }));
+
+    await useWeatherStore.getState().ensureCurrentWeather(location);
+
+    expect(fetchWeatherBundleMock).not.toHaveBeenCalled();
+  });
+
+  it("marks resources as refreshing when data exists and TTL is expired", async () => {
+    const location: LocationRef = { ...baseLocation };
+    const key = buildLocationKey(location);
+
+    useWeatherStore.setState((state) => ({
+      ...state,
+      bundleTtlMs: 0, // force refresh
+      currentByLocationKey: {
+        [key]: {
+          status: "success",
+          data: fakeCurrentWeather,
+          lastUpdatedAt: Date.now() - 10 * 60 * 1000,
+        },
+      },
+      forecastByLocationKey: {},
+      alertsByLocationKey: {},
+    }));
+
+    let resolveBundle: (bundle: WeatherBundle) => void;
+    const bundlePromise = new Promise<WeatherBundle>((resolve) => {
+      resolveBundle = resolve;
+    });
+
+    fetchWeatherBundleMock.mockReturnValue(bundlePromise);
+
+    const ensurePromise =
+      useWeatherStore.getState().ensureCurrentWeather(location);
+
+    const intermediateState = useWeatherStore.getState();
+    expect(intermediateState.currentByLocationKey[key]).toMatchObject({
+      status: "success",
+      isRefreshing: true,
+      data: fakeCurrentWeather,
+    });
+
+    resolveBundle!(fakeBundle);
+    await ensurePromise;
+
+    const finalState = useWeatherStore.getState();
+    expect(finalState.currentByLocationKey[key]).toMatchObject({
+      status: "success",
+      isRefreshing: false,
+      data: fakeCurrentWeather,
+    });
+  });
+
+  it("preserves previous data when fetch fails and sets error status", async () => {
+    const location: LocationRef = { ...baseLocation };
+    const key = buildLocationKey(location);
+
+    const previousCurrent: CurrentWeather = {
+      ...fakeCurrentWeather,
+      temperature: 10,
+    };
+
+    useWeatherStore.setState((state) => ({
+      ...state,
+      currentByLocationKey: {
+        [key]: {
+          status: "success",
+          data: previousCurrent,
+          lastUpdatedAt: Date.now() - 10 * 60 * 1000,
+        },
+      },
+      forecastByLocationKey: {
+        [key]: {
+          status: "success",
+          data: fakeForecast,
+          lastUpdatedAt: Date.now() - 10 * 60 * 1000,
+        },
+      },
+      alertsByLocationKey: {
+        [key]: {
+          status: "success",
+          data: fakeAlerts,
+          lastUpdatedAt: Date.now() - 10 * 60 * 1000,
+        },
+      },
+      bundleTtlMs: 0,
+    }));
+
+    const error: WeatherError = {
+      kind: "network",
+      message: "Network down",
+    };
+
+    fetchWeatherBundleMock.mockRejectedValue(error);
+
+    await useWeatherStore.getState().ensureCurrentWeather(location);
+
+    const state = useWeatherStore.getState();
+
+    expect(state.currentByLocationKey[key]).toMatchObject({
+      status: "error",
+      data: previousCurrent,
+      error,
+      isRefreshing: false,
+    });
+
+    expect(state.forecastByLocationKey[key]).toMatchObject({
+      status: "error",
+      data: fakeForecast,
+      error,
+      isRefreshing: false,
+    });
+
+    expect(state.alertsByLocationKey[key]).toMatchObject({
+      status: "error",
+      data: fakeAlerts,
+      error,
+      isRefreshing: false,
+    });
+  });
+
+  it("clears resources by location key", () => {
+    const location: LocationRef = { ...baseLocation };
+    const key = buildLocationKey(location);
+
+    useWeatherStore.setState((state) => ({
+      ...state,
+      currentByLocationKey: { [key]: { status: "success" } as any },
+      forecastByLocationKey: { [key]: { status: "success" } as any },
+      alertsByLocationKey: { [key]: { status: "success" } as any },
+    }));
+
+    const store = useWeatherStore.getState();
+    store.clearCurrentForLocation(key);
+    store.clearForecastForLocation(key);
+    store.clearAlertsForLocation(key);
+
+    const state = useWeatherStore.getState();
+    expect(state.currentByLocationKey[key]).toBeUndefined();
+    expect(state.forecastByLocationKey[key]).toBeUndefined();
+    expect(state.alertsByLocationKey[key]).toBeUndefined();
   });
 });
